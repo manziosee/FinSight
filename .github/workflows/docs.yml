@@ -1,9 +1,8 @@
 name: API Docs
 
+# GitHub Pages must be enabled first: repo Settings → Pages → Source: "GitHub Actions".
+# Until then this only runs on demand.
 on:
-  push:
-    branches: [main]
-    paths: ["services/**", "libs/**", "docs/api/**", "scripts/gen-openapi.sh"]
   workflow_dispatch:
 
 permissions:
@@ -28,6 +27,7 @@ jobs:
           mkdir -p site
           cp docs/api/finsight.openapi.json site/openapi.json
           npx --yes @redocly/cli build-docs site/openapi.json -o site/index.html
+      - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with: {path: site}
       - id: deploy

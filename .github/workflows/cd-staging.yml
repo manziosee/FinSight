@@ -19,7 +19,23 @@ env:
   EKS_CLUSTER: finsight-staging
 
 jobs:
+  guard:
+    runs-on: ubuntu-latest
+    outputs:
+      configured: ${{ steps.c.outputs.configured }}
+    steps:
+      - id: c
+        run: |
+          if [ -n "${{ vars.STAGING_ECR_REGISTRY }}" ] && [ -n "${{ vars.STAGING_DEPLOY_ROLE_ARN }}" ]; then
+            echo "configured=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "configured=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::CD skipped — set repo variables STAGING_ECR_REGISTRY and STAGING_DEPLOY_ROLE_ARN (from terraform outputs) to enable."
+          fi
+
   build-push:
+    needs: guard
+    if: needs.guard.outputs.configured == 'true'
     runs-on: ubuntu-latest
     outputs:
       tag: ${{ steps.meta.outputs.tag }}
@@ -54,11 +70,10 @@ jobs:
           tags: ${{ env.ECR_REGISTRY }}/finsight/${{ matrix.service }}:${{ steps.meta.outputs.tag }}
           provenance: true
           sbom: true
-          cache-from: type=gha,scope=${{ matrix.service }}
-          cache-to: type=gha,scope=${{ matrix.service }},mode=max
 
   deploy:
-    needs: build-push
+    needs: [guard, build-push]
+    if: needs.guard.outputs.configured == 'true'
     runs-on: ubuntu-latest
     environment: staging
     steps:
