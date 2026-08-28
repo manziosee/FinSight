@@ -15,7 +15,7 @@ from finsight_common.events import (
     topic_for,
 )
 from finsight_common.logging import get_logger
-from finsight_common.messaging import KafkaEventBus
+from finsight_common.messaging import KafkaConnection, KafkaEventBus
 from finsight_common.schemas import FinancialRecord
 from normalization_service import __version__
 from normalization_service.config import get_settings
@@ -24,7 +24,7 @@ from normalization_service.parsers import parse_bytes
 settings = get_settings()
 log = get_logger("normalization-service")
 bus = KafkaEventBus(
-    settings.kafka_bootstrap_servers,
+    KafkaConnection.from_settings(settings),
     client_id="normalization-service",
     group_id="normalization-service",
 )

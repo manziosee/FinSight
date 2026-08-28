@@ -14,7 +14,7 @@ from finsight_common.events import (
     topic_for,
 )
 from finsight_common.logging import get_logger
-from finsight_common.messaging import KafkaEventBus
+from finsight_common.messaging import KafkaConnection, KafkaEventBus
 from graph_service import __version__
 from graph_service.config import get_settings
 from graph_service.graph import FinancialGraph
@@ -23,7 +23,9 @@ settings = get_settings()
 log = get_logger("graph-service")
 graph = FinancialGraph(settings.neo4j_uri, settings.neo4j_user, settings.neo4j_password)
 bus = KafkaEventBus(
-    settings.kafka_bootstrap_servers, client_id="graph-service", group_id="graph-service"
+    KafkaConnection.from_settings(settings),
+    client_id="graph-service",
+    group_id="graph-service",
 )
 _consumer_task: asyncio.Task | None = None
 

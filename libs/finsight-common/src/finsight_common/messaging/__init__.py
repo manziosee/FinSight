@@ -1,6 +1,7 @@
 from finsight_common.messaging.kafka import (
     EventBus,
     EventHandler,
+    KafkaConnection,
     KafkaEventBus,
     NullEventBus,
 )
@@ -10,6 +11,7 @@ from finsight_common.messaging.outbox_sql import OutboxRow, SqlOutboxStore, enqu
 __all__ = [
     "EventBus",
     "EventHandler",
+    "KafkaConnection",
     "KafkaEventBus",
     "NullEventBus",
     "OutboxRelay",

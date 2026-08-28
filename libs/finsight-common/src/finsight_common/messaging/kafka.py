@@ -4,15 +4,56 @@ from __future__ import annotations
 
 import asyncio
 import json
+import ssl
 from collections.abc import Awaitable, Callable
-from typing import Any, Protocol
+from dataclasses import dataclass
+from typing import TYPE_CHECKING, Any, Protocol
 
 from finsight_common.events import EventEnvelope, topic_for
 from finsight_common.logging import get_logger
 
+if TYPE_CHECKING:
+    from finsight_common.config import ServiceSettings
+
 _log = get_logger(__name__)
 
 EventHandler = Callable[[dict[str, Any]], Awaitable[None]]
+
+
+@dataclass(slots=True)
+class KafkaConnection:
+    """Connection params. PLAINTEXT locally / on MSK-in-VPC; SASL_SSL for Upstash & friends."""
+
+    bootstrap_servers: str
+    security_protocol: str = "PLAINTEXT"
+    sasl_mechanism: str | None = None
+    sasl_username: str | None = None
+    sasl_password: str | None = None
+    enable_idempotence: bool = True
+
+    @classmethod
+    def from_settings(cls, settings: ServiceSettings) -> KafkaConnection:
+        return cls(
+            bootstrap_servers=settings.kafka_bootstrap_servers,
+            security_protocol=settings.kafka_security_protocol,
+            sasl_mechanism=settings.kafka_sasl_mechanism,
+            sasl_username=settings.kafka_sasl_username,
+            sasl_password=settings.kafka_sasl_password,
+            enable_idempotence=settings.kafka_enable_idempotence,
+        )
+
+    def client_kwargs(self) -> dict[str, Any]:
+        kw: dict[str, Any] = {
+            "bootstrap_servers": self.bootstrap_servers,
+            "security_protocol": self.security_protocol,
+        }
+        if self.security_protocol.endswith("SSL"):
+            kw["ssl_context"] = ssl.create_default_context()
+        if self.sasl_mechanism:
+            kw["sasl_mechanism"] = self.sasl_mechanism
+            kw["sasl_plain_username"] = self.sasl_username
+            kw["sasl_plain_password"] = self.sasl_password
+        return kw
 
 
 class EventBus(Protocol):
@@ -24,8 +65,18 @@ class EventBus(Protocol):
 
 
 class KafkaEventBus:
-    def __init__(self, bootstrap_servers: str, *, client_id: str, group_id: str) -> None:
-        self._bootstrap = bootstrap_servers
+    def __init__(
+        self,
+        connection: str | KafkaConnection,
+        *,
+        client_id: str,
+        group_id: str,
+    ) -> None:
+        self._conn = (
+            connection
+            if isinstance(connection, KafkaConnection)
+            else KafkaConnection(bootstrap_servers=connection)
+        )
         self._client_id = client_id
         self._group_id = group_id
         self._producer: Any = None
@@ -35,13 +86,17 @@ class KafkaEventBus:
         from aiokafka import AIOKafkaProducer
 
         self._producer = AIOKafkaProducer(
-            bootstrap_servers=self._bootstrap,
             client_id=self._client_id,
-            enable_idempotence=True,
+            enable_idempotence=self._conn.enable_idempotence,
             acks="all",
+            **self._conn.client_kwargs(),
         )
         await self._producer.start()
-        _log.info("kafka.producer.started", bootstrap=self._bootstrap)
+        _log.info(
+            "kafka.producer.started",
+            bootstrap=self._conn.bootstrap_servers,
+            security=self._conn.security_protocol,
+        )
 
     @property
     def producer(self) -> Any:
@@ -67,10 +122,11 @@ class KafkaEventBus:
             return
         consumer = AIOKafkaConsumer(
             *self._handlers.keys(),
-            bootstrap_servers=self._bootstrap,
             group_id=self._group_id,
+            client_id=self._client_id,
             enable_auto_commit=False,
             auto_offset_reset="earliest",
+            **self._conn.client_kwargs(),
         )
         await consumer.start()
         _log.info("kafka.consumer.started", topics=list(self._handlers))

@@ -1,0 +1,35 @@
+# fly.toml — finsight-action-service. Deploy from the REPO ROOT:
+#   fly deploy --config deploy/fly/action-service.toml --remote-only
+app = "finsight-action-service"
+primary_region = "jnb"
+
+[build]
+  dockerfile = "Dockerfile"
+
+[build.args]
+  SERVICE = "action-service"
+
+[env]
+  FINSIGHT_ENV = "production"
+  FINSIGHT_LOG_LEVEL = "INFO"
+  FINSIGHT_SERVICE = "action-service"
+
+[http_service]
+  internal_port = 8000
+  force_https = false
+  auto_stop_machines = "suspend"
+  auto_start_machines = true
+  min_machines_running = 0
+  processes = ["app"]
+
+  [[http_service.checks]]
+    grace_period = "20s"
+    interval = "15s"
+    method = "GET"
+    path = "/health"
+    timeout = "3s"
+
+[[vm]]
+  cpu_kind = "shared"
+  cpus = 1
+  memory = "512mb"

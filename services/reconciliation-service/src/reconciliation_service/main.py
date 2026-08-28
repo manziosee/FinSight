@@ -18,7 +18,7 @@ from finsight_common.events import (
     topic_for,
 )
 from finsight_common.logging import get_logger
-from finsight_common.messaging import KafkaEventBus
+from finsight_common.messaging import KafkaConnection, KafkaEventBus
 from finsight_common.schemas import RecordType
 from reconciliation_service import __version__
 from reconciliation_service.config import get_settings
@@ -29,7 +29,7 @@ settings = get_settings()
 log = get_logger("reconciliation-service")
 db = Database(settings.reconciliation_db_dsn)
 bus = KafkaEventBus(
-    settings.kafka_bootstrap_servers,
+    KafkaConnection.from_settings(settings),
     client_id="reconciliation-service",
     group_id="reconciliation-service",
 )

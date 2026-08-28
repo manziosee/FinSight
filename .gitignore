@@ -43,6 +43,10 @@ crash.log
 infra/local/certs/
 docs/api/*.local.json
 
+# Fly.io deploy secrets
+deploy/fly/secrets.env
+deploy/fly/jwt-private.pem
+
 # Stray dirs pre-existing in workspace
 tmp/
 .marscode/

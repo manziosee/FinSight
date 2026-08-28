@@ -1,0 +1,47 @@
+# fly.toml — finsight-api-gateway (the only PUBLIC app). Deploy from the REPO ROOT:
+#   fly deploy --config deploy/fly/api-gateway.toml --remote-only
+app = "finsight-api-gateway"
+primary_region = "jnb"
+
+[build]
+  dockerfile = "Dockerfile"
+
+[build.args]
+  SERVICE = "api-gateway"
+
+[env]
+  FINSIGHT_ENV = "production"
+  FINSIGHT_LOG_LEVEL = "INFO"
+  FINSIGHT_SERVICE = "api-gateway"
+  FINSIGHT_TRUSTED_HOSTS = '["*"]'
+  # Upstreams over Fly's private 6PN network (<app>.internal):
+  FINSIGHT_IDENTITY_URL = "http://finsight-identity-service.internal:8000"
+  FINSIGHT_INGESTION_URL = "http://finsight-ingestion-service.internal:8000"
+  FINSIGHT_NORMALIZATION_URL = "http://finsight-normalization-service.internal:8000"
+  FINSIGHT_GRAPH_URL = "http://finsight-graph-service.internal:8000"
+  FINSIGHT_RECONCILIATION_URL = "http://finsight-reconciliation-service.internal:8000"
+  FINSIGHT_INTELLIGENCE_URL = "http://finsight-intelligence-service.internal:8000"
+  FINSIGHT_ANOMALY_URL = "http://finsight-anomaly-service.internal:8000"
+  FINSIGHT_FORECAST_URL = "http://finsight-forecast-service.internal:8000"
+  FINSIGHT_ACTION_URL = "http://finsight-action-service.internal:8000"
+  FINSIGHT_JWKS_URL = "http://finsight-identity-service.internal:8000/.well-known/jwks.json"
+
+[http_service]
+  internal_port = 8000
+  force_https = true
+  auto_stop_machines = "off"
+  auto_start_machines = true
+  min_machines_running = 1
+  processes = ["app"]
+
+  [[http_service.checks]]
+    grace_period = "20s"
+    interval = "15s"
+    method = "GET"
+    path = "/health"
+    timeout = "3s"
+
+[[vm]]
+  cpu_kind = "shared"
+  cpus = 1
+  memory = "512mb"

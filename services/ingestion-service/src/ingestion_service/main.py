@@ -12,7 +12,13 @@ from finsight_common.auth import Principal, require_scopes
 from finsight_common.db import Database
 from finsight_common.errors import FinSightError
 from finsight_common.events import DataIngested, EventEnvelope
-from finsight_common.messaging import KafkaEventBus, OutboxRelay, SqlOutboxStore, enqueue_event
+from finsight_common.messaging import (
+    KafkaConnection,
+    KafkaEventBus,
+    OutboxRelay,
+    SqlOutboxStore,
+    enqueue_event,
+)
 from ingestion_service import __version__
 from ingestion_service.config import get_settings
 from ingestion_service.models import Ingestion
@@ -22,7 +28,7 @@ settings = get_settings()
 db = Database(settings.ingestion_db_dsn)
 store = ObjectStore(settings)
 bus = KafkaEventBus(
-    settings.kafka_bootstrap_servers,
+    KafkaConnection.from_settings(settings),
     client_id="ingestion-service",
     group_id="ingestion-service",
 )

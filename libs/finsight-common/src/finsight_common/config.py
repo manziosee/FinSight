@@ -37,6 +37,11 @@ class ServiceSettings(BaseSettings):
 
     # Infra (only what a given service needs is actually used)
     kafka_bootstrap_servers: str = "localhost:9092"
+    kafka_security_protocol: str = "PLAINTEXT"  # or SASL_SSL for Upstash/Confluent Cloud
+    kafka_sasl_mechanism: str | None = None  # e.g. SCRAM-SHA-256, PLAIN
+    kafka_sasl_username: str | None = None
+    kafka_sasl_password: str | None = None
+    kafka_enable_idempotence: bool = True  # set false on brokers without idempotent producer
     redis_url: str = "redis://localhost:6379/0"
 
     # Security
