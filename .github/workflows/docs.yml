@@ -28,7 +28,7 @@ jobs:
           cp docs/api/finsight.openapi.json site/openapi.json
           npx --yes @redocly/cli build-docs site/openapi.json -o site/index.html
       - uses: actions/configure-pages@v5
-      - uses: actions/upload-pages-artifact@v3
+      - uses: actions/upload-pages-artifact@v5
         with: {path: site}
       - id: deploy
         uses: actions/deploy-pages@v4
