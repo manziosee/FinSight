@@ -1,0 +1,39 @@
+# Traefik dynamic configuration for local development.
+# The API gateway does auth + routing; Traefik terminates the edge, applies
+# rate-limit / security-header middleware and (in staging/prod) TLS via cert-manager.
+http:
+  routers:
+    finsight-api:
+      rule: "PathPrefix(`/`)"
+      entryPoints: [web]
+      service: api-gateway
+      middlewares: [security-headers, edge-ratelimit, compress]
+
+  services:
+    api-gateway:
+      loadBalancer:
+        servers:
+          - url: "http://api-gateway:8000"
+        healthCheck:
+          path: /health
+          interval: 10s
+
+  middlewares:
+    security-headers:
+      headers:
+        frameDeny: true
+        contentTypeNosniff: true
+        browserXssFilter: true
+        referrerPolicy: "no-referrer"
+        stsSeconds: 63072000
+        stsIncludeSubdomains: true
+        customResponseHeaders:
+          Server: ""
+          X-Powered-By: ""
+    edge-ratelimit:
+      rateLimit:
+        average: 100
+        burst: 50
+        period: 1s
+    compress:
+      compress: {}

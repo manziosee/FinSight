@@ -1,0 +1,286 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "FinSight Forecast Service",
+    "description": "Cash-flow forecasting and scenario simulation. STATUS: scaffold \u2014 naive linear projection; replace with a real model.",
+    "version": "0.1.0"
+  },
+  "paths": {
+    "/health": {
+      "get": {
+        "tags": [
+          "ops"
+        ],
+        "summary": "Liveness probe",
+        "operationId": "health_health_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "type": "object",
+                  "title": "Response Health Health Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/ready": {
+      "get": {
+        "tags": [
+          "ops"
+        ],
+        "summary": "Readiness probe",
+        "operationId": "ready_ready_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Ready Ready Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/forecast": {
+      "post": {
+        "tags": [
+          "forecast"
+        ],
+        "summary": "Forecast",
+        "operationId": "forecast_v1_forecast_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ForecastRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ForecastResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/simulate": {
+      "post": {
+        "tags": [
+          "forecast"
+        ],
+        "summary": "Simulate",
+        "operationId": "simulate_v1_simulate_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": true,
+                "type": "object",
+                "title": "Scenario"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Simulate V1 Simulate Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "ForecastPoint": {
+        "properties": {
+          "date": {
+            "type": "string",
+            "format": "date",
+            "title": "Date"
+          },
+          "projected_balance_minor": {
+            "type": "integer",
+            "title": "Projected Balance Minor"
+          }
+        },
+        "type": "object",
+        "required": [
+          "date",
+          "projected_balance_minor"
+        ],
+        "title": "ForecastPoint"
+      },
+      "ForecastRequest": {
+        "properties": {
+          "opening_balance_minor": {
+            "type": "integer",
+            "title": "Opening Balance Minor"
+          },
+          "horizon_days": {
+            "type": "integer",
+            "maximum": 365.0,
+            "minimum": 1.0,
+            "title": "Horizon Days",
+            "default": 30
+          },
+          "expected_inflows_minor": {
+            "type": "integer",
+            "title": "Expected Inflows Minor",
+            "default": 0
+          },
+          "expected_outflows_minor": {
+            "type": "integer",
+            "title": "Expected Outflows Minor",
+            "default": 0
+          },
+          "currency": {
+            "type": "string",
+            "title": "Currency",
+            "default": "USD"
+          }
+        },
+        "type": "object",
+        "required": [
+          "opening_balance_minor"
+        ],
+        "title": "ForecastRequest"
+      },
+      "ForecastResponse": {
+        "properties": {
+          "currency": {
+            "type": "string",
+            "title": "Currency"
+          },
+          "points": {
+            "items": {
+              "$ref": "#/components/schemas/ForecastPoint"
+            },
+            "type": "array",
+            "title": "Points"
+          },
+          "risk": {
+            "type": "string",
+            "title": "Risk"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status",
+            "default": "scaffold"
+          }
+        },
+        "type": "object",
+        "required": [
+          "currency",
+          "points",
+          "risk"
+        ],
+        "title": "ForecastResponse"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "ctx": {
+            "type": "object",
+            "title": "Context"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      }
+    }
+  }
+}

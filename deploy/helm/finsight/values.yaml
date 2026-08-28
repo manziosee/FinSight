@@ -1,0 +1,75 @@
+# Default values. Override per environment with values-<env>.yaml.
+global:
+  image:
+    registry: 000000000000.dkr.ecr.eu-west-1.amazonaws.com
+    tag: latest
+    pullPolicy: IfNotPresent
+  env: staging
+  otlpEndpoint: http://otel-collector.observability:4317
+  # External Secrets Operator ClusterSecretStore name
+  secretStore: aws-secrets-manager
+
+# Applied to every service Deployment.
+defaults:
+  replicas: 2
+  resources:
+    requests: {cpu: 100m, memory: 192Mi}
+    limits: {cpu: "1", memory: 512Mi}
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 8
+    targetCPUUtilizationPercentage: 70
+  podDisruptionBudget:
+    enabled: true
+    minAvailable: 1
+  securityContext:
+    runAsNonRoot: true
+    runAsUser: 10001
+    readOnlyRootFilesystem: true
+    allowPrivilegeEscalation: false
+    capabilities: {drop: ["ALL"]}
+  serviceMonitor:
+    enabled: true
+
+# Each key becomes a Deployment + Service. `port` is always 8000.
+services:
+  api-gateway:
+    public: true
+    extraEnv:
+      FINSIGHT_TRUSTED_HOSTS: '["api.finsight.dev"]'
+  identity-service:
+    secrets: [FINSIGHT_IDENTITY_DB_DSN, FINSIGHT_JWT_PRIVATE_KEY_PEM]
+  ingestion-service:
+    secrets: [FINSIGHT_INGESTION_DB_DSN, FINSIGHT_S3_RAW_BUCKET]
+  normalization-service:
+    secrets: [FINSIGHT_NORMALIZATION_DB_DSN, FINSIGHT_S3_RAW_BUCKET]
+  graph-service:
+    secrets: [FINSIGHT_NEO4J_URI, FINSIGHT_NEO4J_PASSWORD]
+  reconciliation-service:
+    secrets: [FINSIGHT_RECONCILIATION_DB_DSN]
+  intelligence-service:
+    secrets: [ANTHROPIC_API_KEY]
+  anomaly-service: {}
+  forecast-service: {}
+  action-service: {}
+
+ingress:
+  enabled: true
+  className: traefik
+  host: api.finsight.dev
+  tls:
+    enabled: true
+    clusterIssuer: letsencrypt-prod
+
+# Shared infra config (endpoints only; credentials come from Secrets).
+config:
+  FINSIGHT_KAFKA_BOOTSTRAP_SERVERS: kafka-bootstrap.kafka:9092
+  FINSIGHT_REDIS_URL: redis://redis-master.redis:6379/0
+  FINSIGHT_JWT_ISSUER: https://identity.finsight.dev
+  FINSIGHT_JWT_AUDIENCE: finsight-api
+  FINSIGHT_JWKS_URL: http://identity-service:8000/.well-known/jwks.json
+
+migrations:
+  enabled: true
+  services: [identity-service, ingestion-service, normalization-service, reconciliation-service]

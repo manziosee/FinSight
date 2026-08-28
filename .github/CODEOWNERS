@@ -1,0 +1,9 @@
+# Default owners for everything.
+*                       @sicrwanda/finsight-maintainers
+
+/libs/finsight-common/  @sicrwanda/finsight-platform
+/services/api-gateway/  @sicrwanda/finsight-platform
+/services/identity-service/ @sicrwanda/finsight-security
+/deploy/                @sicrwanda/finsight-platform
+/.github/workflows/     @sicrwanda/finsight-platform
+/docs/adr/              @sicrwanda/finsight-maintainers

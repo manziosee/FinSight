@@ -1,0 +1,30 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: finsight
+  labels:
+    app.kubernetes.io/part-of: finsight
+    pod-security.kubernetes.io/enforce: restricted
+---
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: finsight-quota
+  namespace: finsight
+spec:
+  hard:
+    requests.cpu: "8"
+    requests.memory: 16Gi
+    limits.cpu: "32"
+    limits.memory: 48Gi
+---
+apiVersion: v1
+kind: LimitRange
+metadata:
+  name: finsight-limits
+  namespace: finsight
+spec:
+  limits:
+    - type: Container
+      default: {cpu: 500m, memory: 512Mi}
+      defaultRequest: {cpu: 100m, memory: 128Mi}

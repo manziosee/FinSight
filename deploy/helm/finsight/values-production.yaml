@@ -1,0 +1,9 @@
+global:
+  env: production
+  image:
+    tag: ""  # set by CD to the promoted image digest
+defaults:
+  replicas: 3
+  autoscaling: {minReplicas: 3, maxReplicas: 20}
+ingress:
+  host: api.finsight.dev

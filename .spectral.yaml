@@ -1,0 +1,22 @@
+extends: ["spectral:oas"]
+rules:
+  operation-operationId: warn
+  operation-tags: error
+  operation-description: warn
+  info-contact: off
+  oas3-api-servers: off
+  # FinSight API conventions
+  path-kebab-or-snake:
+    description: Paths use lowercase segments
+    given: "$.paths[*]~"
+    then:
+      function: pattern
+      functionOptions:
+        match: "^(/[a-z0-9._~{}-]+)+$|^/$"
+  no-trailing-slash:
+    description: Paths must not end with a slash
+    given: "$.paths[*]~"
+    then:
+      function: pattern
+      functionOptions:
+        notMatch: ".+/$"

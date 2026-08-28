@@ -1,0 +1,345 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "FinSight Reconciliation Service",
+    "description": "Matches payments to invoices (and bank/ledger) with a confidence and explanation.",
+    "version": "0.1.0"
+  },
+  "paths": {
+    "/health": {
+      "get": {
+        "tags": [
+          "ops"
+        ],
+        "summary": "Liveness probe",
+        "operationId": "health_health_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "type": "object",
+                  "title": "Response Health Health Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/ready": {
+      "get": {
+        "tags": [
+          "ops"
+        ],
+        "summary": "Readiness probe",
+        "operationId": "ready_ready_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Ready Ready Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/reconciliation/run": {
+      "post": {
+        "tags": [
+          "reconciliation"
+        ],
+        "summary": "Run",
+        "operationId": "run_v1_reconciliation_run_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RunRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RunResult"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/reconciliation/{run_id}": {
+      "get": {
+        "tags": [
+          "reconciliation"
+        ],
+        "summary": "Get Run",
+        "operationId": "get_run_v1_reconciliation__run_id__get",
+        "parameters": [
+          {
+            "name": "run_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Run Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RunResult"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/payments/match": {
+      "post": {
+        "tags": [
+          "reconciliation"
+        ],
+        "summary": "Match Pair",
+        "operationId": "match_pair_v1_payments_match_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PairRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MatchOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "MatchOut": {
+        "properties": {
+          "payment_id": {
+            "type": "string",
+            "title": "Payment Id"
+          },
+          "invoice_id": {
+            "type": "string",
+            "title": "Invoice Id"
+          },
+          "confidence": {
+            "type": "number",
+            "title": "Confidence"
+          },
+          "explanation": {
+            "type": "string",
+            "title": "Explanation"
+          }
+        },
+        "type": "object",
+        "required": [
+          "payment_id",
+          "invoice_id",
+          "confidence",
+          "explanation"
+        ],
+        "title": "MatchOut"
+      },
+      "PairRequest": {
+        "properties": {
+          "payment": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Payment"
+          },
+          "invoice": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Invoice"
+          }
+        },
+        "type": "object",
+        "required": [
+          "payment",
+          "invoice"
+        ],
+        "title": "PairRequest"
+      },
+      "RunRequest": {
+        "properties": {
+          "scope": {
+            "type": "string",
+            "title": "Scope",
+            "default": "payment_invoice"
+          },
+          "ingestion_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ingestion Id"
+          }
+        },
+        "type": "object",
+        "title": "RunRequest"
+      },
+      "RunResult": {
+        "properties": {
+          "run_id": {
+            "type": "string",
+            "title": "Run Id"
+          },
+          "scope": {
+            "type": "string",
+            "title": "Scope"
+          },
+          "matched": {
+            "type": "integer",
+            "title": "Matched"
+          },
+          "unmatched": {
+            "type": "integer",
+            "title": "Unmatched"
+          },
+          "matches": {
+            "items": {
+              "$ref": "#/components/schemas/MatchOut"
+            },
+            "type": "array",
+            "title": "Matches"
+          }
+        },
+        "type": "object",
+        "required": [
+          "run_id",
+          "scope",
+          "matched",
+          "unmatched",
+          "matches"
+        ],
+        "title": "RunResult"
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "ctx": {
+            "type": "object",
+            "title": "Context"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      }
+    }
+  }
+}

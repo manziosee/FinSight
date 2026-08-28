@@ -1,0 +1,77 @@
+name: CD · production
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      image_tag:
+        description: "12-char image tag already in staging ECR to promote"
+        required: true
+
+concurrency:
+  group: cd-production
+  cancel-in-progress: false
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  AWS_REGION: eu-west-1
+  STAGING_REGISTRY: ${{ vars.STAGING_ECR_REGISTRY }}
+  PROD_REGISTRY: ${{ vars.PRODUCTION_ECR_REGISTRY }}
+  EKS_CLUSTER: finsight-production
+  SERVICES: >-
+    api-gateway identity-service ingestion-service normalization-service graph-service
+    reconciliation-service intelligence-service anomaly-service forecast-service action-service
+
+jobs:
+  promote-images:
+    runs-on: ubuntu-latest
+    environment: production
+    outputs:
+      tag: ${{ steps.tag.outputs.tag }}
+    steps:
+      - id: tag
+        run: |
+          if [ -n "${{ inputs.image_tag }}" ]; then echo "tag=${{ inputs.image_tag }}" >> "$GITHUB_OUTPUT";
+          else echo "tag=${GITHUB_SHA::12}" >> "$GITHUB_OUTPUT"; fi
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.PRODUCTION_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+      - uses: aws-actions/amazon-ecr-login@v2
+      - name: Copy each image digest staging -> production
+        run: |
+          for svc in $SERVICES; do
+            docker buildx imagetools create \
+              --tag "$PROD_REGISTRY/finsight/$svc:${{ steps.tag.outputs.tag }}" \
+              "$STAGING_REGISTRY/finsight/$svc:${{ steps.tag.outputs.tag }}"
+          done
+
+  deploy:
+    needs: promote-images
+    runs-on: ubuntu-latest
+    environment: production   # requires manual approval (configured on the GitHub Environment)
+    steps:
+      - uses: actions/checkout@v4
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.PRODUCTION_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+      - uses: azure/setup-helm@v4
+      - run: aws eks update-kubeconfig --name ${{ env.EKS_CLUSTER }} --region ${{ env.AWS_REGION }}
+      - name: Helm upgrade (canary via Argo Rollouts if installed, else rolling)
+        run: |
+          helm upgrade --install finsight deploy/helm/finsight \
+            -n finsight --create-namespace \
+            -f deploy/helm/finsight/values-production.yaml \
+            --set global.image.registry=${{ env.PROD_REGISTRY }} \
+            --set global.image.tag=${{ needs.promote-images.outputs.tag }} \
+            --atomic --wait --timeout 15m
+      - name: Post-deploy smoke test
+        run: |
+          kubectl -n finsight port-forward svc/api-gateway 8080:8000 &
+          sleep 5
+          FINSIGHT_BASE_URL=http://localhost:8080 ./scripts/smoke-test.sh

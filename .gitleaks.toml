@@ -1,0 +1,18 @@
+title = "FinSight gitleaks config"
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Local-dev fixtures — never real credentials"
+paths = [
+  '''\.env\.example''',
+  '''infra/local/.*''',
+  '''scripts/demo-data/.*''',
+  '''docs/api/.*\.json''',
+]
+regexes = [
+  '''finsight_local_pw''',
+  '''demo-secret''',
+  '''REPLACE_ME_WITH''',
+]

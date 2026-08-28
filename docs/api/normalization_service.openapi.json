@@ -1,0 +1,448 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "FinSight Normalization Service",
+    "description": "Turns bank / mobile-money / invoice / spreadsheet data into the Universal Financial Schema.",
+    "version": "0.1.0"
+  },
+  "paths": {
+    "/health": {
+      "get": {
+        "tags": [
+          "ops"
+        ],
+        "summary": "Liveness probe",
+        "operationId": "health_health_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "type": "object",
+                  "title": "Response Health Health Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/ready": {
+      "get": {
+        "tags": [
+          "ops"
+        ],
+        "summary": "Readiness probe",
+        "operationId": "ready_ready_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Ready Ready Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/transactions/understand": {
+      "post": {
+        "tags": [
+          "normalization"
+        ],
+        "summary": "Understand",
+        "operationId": "understand_v1_transactions_understand_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UnderstandRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnderstandResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "FinancialRecord": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id",
+            "description": "Deterministic id assigned by normalization-service."
+          },
+          "tenant_id": {
+            "type": "string",
+            "title": "Tenant Id"
+          },
+          "type": {
+            "$ref": "#/components/schemas/RecordType",
+            "default": "unknown"
+          },
+          "source": {
+            "$ref": "#/components/schemas/RecordSource",
+            "default": "other"
+          },
+          "amount": {
+            "$ref": "#/components/schemas/Money"
+          },
+          "direction": {
+            "type": "string",
+            "title": "Direction",
+            "description": "inbound | outbound | unknown",
+            "default": "unknown"
+          },
+          "occurred_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Occurred At"
+          },
+          "booked_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Booked At"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "reference": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reference",
+            "description": "Invoice no., payment ref, memo, etc."
+          },
+          "counterparty": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Party"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "account": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Party"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "ingestion_id": {
+            "type": "string",
+            "title": "Ingestion Id",
+            "description": "Batch/file this record came from."
+          },
+          "raw_ref": {
+            "type": "string",
+            "title": "Raw Ref",
+            "description": "Pointer (S3 key + row/locator) to the original data."
+          },
+          "confidence": {
+            "type": "number",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Confidence",
+            "default": 1.0
+          },
+          "metadata": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Metadata"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "tenant_id",
+          "amount",
+          "occurred_at",
+          "ingestion_id",
+          "raw_ref"
+        ],
+        "title": "FinancialRecord",
+        "description": "Canonical representation of a single financial fact."
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "Money": {
+        "properties": {
+          "minor_units": {
+            "type": "integer",
+            "title": "Minor Units",
+            "description": "Amount in the smallest currency unit (e.g. cents)."
+          },
+          "currency": {
+            "type": "string",
+            "maxLength": 3,
+            "minLength": 3,
+            "title": "Currency",
+            "description": "ISO 4217 code, uppercase."
+          }
+        },
+        "type": "object",
+        "required": [
+          "minor_units",
+          "currency"
+        ],
+        "title": "Money"
+      },
+      "Party": {
+        "properties": {
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "normalized_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Normalized Name",
+            "description": "Deduplicated/canonical name for entity resolution."
+          },
+          "external_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "External Id"
+          },
+          "account_ref": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Account Ref"
+          },
+          "kind": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Kind",
+            "description": "customer | vendor | employee | bank | self"
+          }
+        },
+        "type": "object",
+        "title": "Party"
+      },
+      "RecordSource": {
+        "type": "string",
+        "enum": [
+          "bank",
+          "mobile_money",
+          "card",
+          "cash",
+          "payment_gateway",
+          "pos",
+          "erp",
+          "accounting",
+          "spreadsheet",
+          "pdf",
+          "api",
+          "other"
+        ],
+        "title": "RecordSource"
+      },
+      "RecordType": {
+        "type": "string",
+        "enum": [
+          "payment",
+          "invoice",
+          "order",
+          "bank_transaction",
+          "receipt",
+          "ledger_entry",
+          "payout",
+          "refund",
+          "fee",
+          "transfer",
+          "unknown"
+        ],
+        "title": "RecordType"
+      },
+      "UnderstandRequest": {
+        "properties": {
+          "transaction": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Transaction",
+            "examples": [
+              {
+                "amount": 850000,
+                "currency": "RWF",
+                "date": "2026-08-28",
+                "description": "ABC LTD PMT INV 439"
+              }
+            ]
+          },
+          "source": {
+            "type": "string",
+            "title": "Source",
+            "default": "api"
+          }
+        },
+        "type": "object",
+        "required": [
+          "transaction"
+        ],
+        "title": "UnderstandRequest"
+      },
+      "UnderstandResponse": {
+        "properties": {
+          "record": {
+            "$ref": "#/components/schemas/FinancialRecord"
+          },
+          "classification": {
+            "type": "string",
+            "title": "Classification"
+          },
+          "confidence": {
+            "type": "number",
+            "title": "Confidence"
+          }
+        },
+        "type": "object",
+        "required": [
+          "record",
+          "classification",
+          "confidence"
+        ],
+        "title": "UnderstandResponse"
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "ctx": {
+            "type": "object",
+            "title": "Context"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      }
+    }
+  }
+}

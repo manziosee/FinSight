@@ -1,0 +1,88 @@
+name: CD · staging
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: cd-staging
+  cancel-in-progress: false
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  AWS_REGION: eu-west-1
+  ECR_REGISTRY: ${{ vars.STAGING_ECR_REGISTRY }}
+  EKS_CLUSTER: finsight-staging
+
+jobs:
+  build-push:
+    runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.meta.outputs.tag }}
+    strategy:
+      matrix:
+        service:
+          - api-gateway
+          - identity-service
+          - ingestion-service
+          - normalization-service
+          - graph-service
+          - reconciliation-service
+          - intelligence-service
+          - anomaly-service
+          - forecast-service
+          - action-service
+    steps:
+      - uses: actions/checkout@v4
+      - id: meta
+        run: echo "tag=${GITHUB_SHA::12}" >> "$GITHUB_OUTPUT"
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.STAGING_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+      - uses: aws-actions/amazon-ecr-login@v2
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          build-args: SERVICE=${{ matrix.service }}
+          push: true
+          tags: ${{ env.ECR_REGISTRY }}/finsight/${{ matrix.service }}:${{ steps.meta.outputs.tag }}
+          provenance: true
+          sbom: true
+          cache-from: type=gha,scope=${{ matrix.service }}
+          cache-to: type=gha,scope=${{ matrix.service }},mode=max
+
+  deploy:
+    needs: build-push
+    runs-on: ubuntu-latest
+    environment: staging
+    steps:
+      - uses: actions/checkout@v4
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.STAGING_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+      - uses: azure/setup-helm@v4
+      - name: Kubeconfig
+        run: aws eks update-kubeconfig --name ${{ env.EKS_CLUSTER }} --region ${{ env.AWS_REGION }}
+      - name: Helm upgrade (runs pre-upgrade migration Jobs)
+        run: |
+          helm upgrade --install finsight deploy/helm/finsight \
+            -n finsight --create-namespace \
+            -f deploy/helm/finsight/values-staging.yaml \
+            --set global.image.registry=${{ env.ECR_REGISTRY }} \
+            --set global.image.tag=${{ needs.build-push.outputs.tag }} \
+            --wait --timeout 10m
+      - name: Smoke test
+        run: |
+          kubectl -n finsight port-forward svc/api-gateway 8080:8000 &
+          sleep 5
+          FINSIGHT_BASE_URL=http://localhost:8080 ./scripts/smoke-test.sh
+      - name: Notify
+        if: always()
+        run: echo "staging deploy ${{ job.status }} for ${{ needs.build-push.outputs.tag }}"

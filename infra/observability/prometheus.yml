@@ -1,0 +1,19 @@
+global:
+  scrape_interval: 15s
+  scrape_timeout: 10s
+
+scrape_configs:
+  - job_name: finsight-services
+    metrics_path: /metrics
+    static_configs:
+      - targets:
+          - api-gateway:8000
+          - identity-service:8000
+          - ingestion-service:8000
+          - normalization-service:8000
+          - graph-service:8000
+          - reconciliation-service:8000
+          - intelligence-service:8000
+          - anomaly-service:8000
+          - forecast-service:8000
+          - action-service:8000

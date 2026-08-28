@@ -1,0 +1,8 @@
+global:
+  env: staging
+ingress:
+  host: api.staging.finsight.dev
+defaults:
+  replicas: 1
+  autoscaling: {enabled: false}
+  podDisruptionBudget: {enabled: false}

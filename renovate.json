@@ -1,0 +1,11 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["config:recommended", ":dependencyDashboard", "docker:pinDigests"],
+  "labels": ["dependencies"],
+  "lockFileMaintenance": {"enabled": true, "schedule": ["before 6am on monday"]},
+  "packageRules": [
+    {"matchManagers": ["pep621"], "matchUpdateTypes": ["minor", "patch"], "groupName": "python minor+patch"},
+    {"matchManagers": ["github-actions"], "groupName": "github actions"},
+    {"matchManagers": ["terraform"], "groupName": "terraform providers/modules"}
+  ]
+}

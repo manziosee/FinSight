@@ -1,0 +1,48 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+.coverage
+htmlcov/
+dist/
+build/
+
+# uv
+uv.lock.bak
+
+# Env / secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+!deploy/**/*.key.example
+secrets.*.yaml
+!secrets.*.example.yaml
+
+# Terraform
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfvars
+!*.tfvars.example
+crash.log
+
+# IDE / OS
+.idea/
+.vscode/
+.DS_Store
+*.swp
+
+# Local infra artifacts
+infra/local/certs/
+docs/api/*.local.json
+
+# Stray dirs pre-existing in workspace
+tmp/
+.marscode/

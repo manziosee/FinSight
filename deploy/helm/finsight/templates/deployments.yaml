@@ -1,0 +1,134 @@
+{{- $g := .Values.global -}}
+{{- $d := .Values.defaults -}}
+{{- range $name, $svc := .Values.services }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $name }}
+  labels:
+    app.kubernetes.io/name: {{ $name }}
+    {{- include "finsight.labels" $ | nindent 4 }}
+spec:
+  replicas: {{ $d.replicas }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ $name }}
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: {{ $name }}
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/path: /metrics
+        prometheus.io/port: "8000"
+    spec:
+      securityContext:
+        runAsNonRoot: {{ $d.securityContext.runAsNonRoot }}
+        runAsUser: {{ $d.securityContext.runAsUser }}
+        seccompProfile: {type: RuntimeDefault}
+      containers:
+        - name: {{ $name }}
+          image: "{{ $g.image.registry }}/finsight/{{ $name }}:{{ $g.image.tag }}"
+          imagePullPolicy: {{ $g.image.pullPolicy }}
+          ports: [{containerPort: 8000, name: http}]
+          securityContext:
+            readOnlyRootFilesystem: {{ $d.securityContext.readOnlyRootFilesystem }}
+            allowPrivilegeEscalation: {{ $d.securityContext.allowPrivilegeEscalation }}
+            capabilities: {{ toYaml $d.securityContext.capabilities | nindent 14 }}
+          env:
+            - {name: FINSIGHT_ENV, value: {{ $g.env | quote }}}
+            - {name: FINSIGHT_OTEL_EXPORTER_OTLP_ENDPOINT, value: {{ $g.otlpEndpoint | quote }}}
+            {{- range $k, $v := $.Values.config }}
+            - {name: {{ $k }}, value: {{ $v | quote }}}
+            {{- end }}
+            {{- range $k, $v := $svc.extraEnv }}
+            - {name: {{ $k }}, value: {{ $v | quote }}}
+            {{- end }}
+          {{- if $svc.secrets }}
+          envFrom:
+            - secretRef: {name: {{ $name }}-secrets}
+          {{- end }}
+          resources: {{ toYaml $d.resources | nindent 12 }}
+          volumeMounts:
+            - {name: tmp, mountPath: /tmp}
+          livenessProbe:
+            httpGet: {path: /health, port: http}
+            initialDelaySeconds: 10
+            periodSeconds: 15
+          readinessProbe:
+            httpGet: {path: /ready, port: http}
+            initialDelaySeconds: 5
+            periodSeconds: 10
+      volumes:
+        - {name: tmp, emptyDir: {}}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ $name }}
+  labels:
+    app.kubernetes.io/name: {{ $name }}
+spec:
+  selector:
+    app.kubernetes.io/name: {{ $name }}
+  ports:
+    - {port: 8000, targetPort: http, name: http}
+{{- if $d.autoscaling.enabled }}
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: {{ $name }}
+spec:
+  scaleTargetRef: {apiVersion: apps/v1, kind: Deployment, name: {{ $name }}}
+  minReplicas: {{ $d.autoscaling.minReplicas }}
+  maxReplicas: {{ $d.autoscaling.maxReplicas }}
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target: {type: Utilization, averageUtilization: {{ $d.autoscaling.targetCPUUtilizationPercentage }}}
+{{- end }}
+{{- if $d.podDisruptionBudget.enabled }}
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ $name }}
+spec:
+  minAvailable: {{ $d.podDisruptionBudget.minAvailable }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ $name }}
+{{- end }}
+{{- if and $d.serviceMonitor.enabled }}
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: {{ $name }}
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ $name }}
+  endpoints:
+    - {port: http, path: /metrics, interval: 30s}
+{{- end }}
+{{- if $svc.secrets }}
+---
+apiVersion: external-secrets.io/v1beta1
+kind: ExternalSecret
+metadata:
+  name: {{ $name }}-secrets
+spec:
+  refreshInterval: 1h
+  secretStoreRef: {name: {{ $g.secretStore }}, kind: ClusterSecretStore}
+  target: {name: {{ $name }}-secrets, creationPolicy: Owner}
+  data:
+    {{- range $svc.secrets }}
+    - secretKey: {{ . }}
+      remoteRef: {key: finsight/{{ $g.env }}/{{ $name }}, property: {{ . }}}
+    {{- end }}
+{{- end }}
+{{- end }}

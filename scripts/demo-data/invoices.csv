@@ -1,0 +1,5 @@
+Date,Description,Amount,Currency,Reference,Type,Customer
+2026-08-01,Invoice #439 for ABC Ltd,850000,RWF,INV-439,invoice,ABC Ltd
+2026-08-03,Invoice #440 for Kigali Foods,1200000,RWF,INV-440,invoice,Kigali Foods
+2026-08-05,Invoice #441 for Umoja Traders,430000,RWF,INV-441,invoice,Umoja Traders
+2026-08-06,Invoice #442 for ABC Ltd,275000,RWF,INV-442,invoice,ABC Ltd
