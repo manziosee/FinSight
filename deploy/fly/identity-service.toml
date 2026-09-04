@@ -6,6 +6,9 @@ primary_region = "jnb"
 [build]
   dockerfile = "Dockerfile"
 
+[deploy]
+  release_command = "alembic -c services/identity-service/alembic.ini upgrade head"
+
 [build.args]
   SERVICE = "identity-service"
 

@@ -82,17 +82,9 @@ You should see `SMOKE PASS`: token → upload → normalize → graph → reconc
 
 ## 5. Migrations
 
-`0001_initial` runs as part of the first deploy is **not** automatic here — run it once per
-DB-owning service after secrets are set:
-
-```bash
-for s in identity-service ingestion-service normalization-service reconciliation-service; do
-  fly ssh console -a "finsight-$s" -C "alembic -c services/$s/alembic.ini upgrade head"
-done
-```
-
-(Or rely on the dev-mode `create_all` by temporarily setting `FINSIGHT_ENV=staging`… don't —
-just run the migration.)
+Automatic: the four DB-owning services declare `[deploy] release_command = "alembic … upgrade head"`
+in their `fly.toml`, so every `fly deploy` runs pending migrations in a release machine
+**before** the new version takes traffic. Nothing to do manually.
 
 ## CI
 

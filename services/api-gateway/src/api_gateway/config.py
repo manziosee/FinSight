@@ -28,6 +28,7 @@ class Settings(ServiceSettings):
         return [
             ("/v1/auth", self.identity_url, "auth"),
             ("/v1/api-keys", self.identity_url, "api-keys"),
+            ("/v1/audit", self.identity_url, "audit"),
             ("/.well-known/jwks.json", self.identity_url, "auth"),
             ("/v1/data", self.ingestion_url, "ingestion"),
             ("/v1/transactions/understand", self.normalization_url, "normalization"),

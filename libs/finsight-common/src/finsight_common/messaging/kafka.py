@@ -115,11 +115,16 @@ class KafkaEventBus:
     def subscribe(self, topic: str, handler: EventHandler) -> None:
         self._handlers.setdefault(topic, []).append(handler)
 
-    async def run_consumers(self) -> None:
+    async def run_consumers(self, *, max_retries: int = 3, retry_base_delay: float = 0.5) -> None:
+        """Consume subscribed topics. A message that keeps failing after ``max_retries``
+        in-process attempts (exponential backoff) is published to ``<topic>.dlq`` and the
+        offset is committed so the partition is not blocked."""
         from aiokafka import AIOKafkaConsumer
 
         if not self._handlers:
             return
+        if self._producer is None:
+            await self.start()
         consumer = AIOKafkaConsumer(
             *self._handlers.keys(),
             group_id=self._group_id,
@@ -132,15 +137,43 @@ class KafkaEventBus:
         _log.info("kafka.consumer.started", topics=list(self._handlers))
         try:
             async for msg in consumer:
-                body = json.loads(msg.value)
-                for handler in self._handlers.get(msg.topic, []):
-                    try:
-                        await handler(body)
-                    except Exception:
-                        _log.exception("event.handler_failed", topic=msg.topic)
+                await self._dispatch(msg, max_retries, retry_base_delay)
                 await consumer.commit()
         finally:
             await consumer.stop()
+
+    async def _dispatch(self, msg: Any, max_retries: int, base_delay: float) -> None:
+        body = json.loads(msg.value)
+        for handler in self._handlers.get(msg.topic, []):
+            for attempt in range(1, max_retries + 1):
+                try:
+                    await handler(body)
+                    break
+                except Exception:
+                    if attempt == max_retries:
+                        _log.exception(
+                            "event.handler_dead_lettered", topic=msg.topic, attempts=attempt
+                        )
+                        await self._to_dlq(msg, body)
+                    else:
+                        _log.warning("event.handler_retry", topic=msg.topic, attempt=attempt)
+                        await asyncio.sleep(base_delay * 2 ** (attempt - 1))
+
+    async def _to_dlq(self, msg: Any, body: dict[str, Any]) -> None:
+        dlq_topic = f"{msg.topic}.dlq"
+        envelope = {
+            "original_topic": msg.topic,
+            "partition": msg.partition,
+            "offset": msg.offset,
+            "key": msg.key.decode() if msg.key else None,
+            "payload": body,
+        }
+        try:
+            await self._producer.send_and_wait(
+                dlq_topic, json.dumps(envelope).encode(), key=msg.key
+            )
+        except Exception:
+            _log.exception("event.dlq_publish_failed", topic=dlq_topic)
 
 
 class NullEventBus:

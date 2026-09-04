@@ -6,6 +6,9 @@ primary_region = "jnb"
 [build]
   dockerfile = "Dockerfile"
 
+[deploy]
+  release_command = "alembic -c services/reconciliation-service/alembic.ini upgrade head"
+
 [build.args]
   SERVICE = "reconciliation-service"
 

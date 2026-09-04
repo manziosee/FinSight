@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "FinSight Normalization Service",
-    "description": "Turns bank / mobile-money / invoice / spreadsheet data into the Universal Financial Schema.",
+    "description": "Turns bank / mobile-money / invoice / spreadsheet / PDF data into the Universal Financial Schema, with per-tenant entity resolution.",
     "version": "0.1.0"
   },
   "paths": {
@@ -393,6 +393,13 @@
           "confidence": {
             "type": "number",
             "title": "Confidence"
+          },
+          "warnings": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Warnings"
           }
         },
         "type": "object",
