@@ -573,6 +573,30 @@
         }
       }
     },
+    "/v1/reconciliation/summary": {
+      "get": {
+        "tags": [
+          "reconciliation"
+        ],
+        "summary": "Summary",
+        "description": "Aggregate evidence for the latest run \u2014 what intelligence-service narrates from.",
+        "operationId": "summary_v1_reconciliation_summary_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Summary V1 Reconciliation Summary Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/reconciliation/{run_id}": {
       "get": {
         "tags": [
@@ -1798,26 +1822,26 @@
             "title": "Answer"
           },
           "evidence": {
-            "items": {
-              "type": "string"
-            },
-            "type": "array",
+            "additionalProperties": true,
+            "type": "object",
             "title": "Evidence"
           },
           "confidence": {
             "type": "number",
-            "title": "Confidence",
-            "default": 0.4
+            "title": "Confidence"
           },
-          "disclaimer": {
-            "type": "string",
-            "title": "Disclaimer",
-            "default": "Scaffold response \u2014 wire real financial context before production use."
+          "grounded": {
+            "type": "boolean",
+            "title": "Grounded",
+            "description": "True if evidence came from live service data, not just caller input"
           }
         },
         "type": "object",
         "required": [
-          "answer"
+          "answer",
+          "evidence",
+          "confidence",
+          "grounded"
         ],
         "title": "Answer"
       },
@@ -1827,7 +1851,7 @@
             "type": "string",
             "title": "Question",
             "examples": [
-              "Which customers consistently pay late?"
+              "Which invoices are still open?"
             ]
           },
           "context": {
@@ -1848,13 +1872,38 @@
             "type": "string",
             "title": "Subject",
             "examples": [
-              "transaction txn_9281"
+              "match m_123 in run r_456"
             ]
+          },
+          "run_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Run Id",
+            "description": "Reconciliation run to pull evidence from"
+          },
+          "match_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Match Id",
+            "description": "Match or unmatched record id within that run"
           },
           "context": {
             "additionalProperties": true,
             "type": "object",
-            "title": "Context"
+            "title": "Context",
+            "description": "Extra evidence supplied by the caller"
           }
         },
         "type": "object",
