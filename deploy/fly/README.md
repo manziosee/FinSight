@@ -1,10 +1,13 @@
 # Deploying FinSight to Fly.io
 
 Each service is its own Fly app on one organisation, wired together over Fly's private
-`*.internal` network. Only **`finsight-api-gateway`** is public.
+`*.internal` network. Two apps are public: **`finsight-api-gateway`** (TLS edge, the only
+way in to the API) and **`finsight-console`** (the reference UI, calls the gateway from
+the browser).
 
 ```
-Internet ─► finsight-api-gateway.fly.dev  (TLS, the only public app)
+Internet ─► finsight-console.fly.dev  (browser UI)
+Internet ─► finsight-api-gateway.fly.dev  (TLS, the API)
                     │  http://finsight-*.internal:8000
    ┌────────────────┼───────────────────────────────┐
  identity   ingestion  normalization  graph  reconciliation  intelligence/anomaly/forecast/action
@@ -69,6 +72,14 @@ RS256 JWT signing key on `finsight-identity-service` so tokens survive restarts.
 ./deploy-all.sh               # identity → data services → stubs → gateway (dependency order)
 fly ips allocate-v4 --shared -a finsight-api-gateway
 fly ips allocate-v6 -a finsight-api-gateway
+
+# The console is self-contained (its own Dockerfile + build context) — deploy it
+# separately, from its own directory:
+cd ../../console
+fly apps create finsight-console --org <your-org> 2>/dev/null || true
+fly deploy   # NEXT_PUBLIC_FINSIGHT_API_URL in console/fly.toml must match your gateway URL
+fly ips allocate-v4 --shared -a finsight-console
+fly ips allocate-v6 -a finsight-console
 ```
 
 ## 4. Verify

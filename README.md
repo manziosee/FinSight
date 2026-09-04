@@ -38,6 +38,7 @@ Redis · S3 · OpenTelemetry. Deployed to AWS EKS via Helm; infra in Terraform. 
 | [anomaly-service](services/anomaly-service) | Rule + statistical anomaly detection | 🧪 scaffold |
 | [forecast-service](services/forecast-service) | Cash-flow forecasting & simulation | 🧪 scaffold |
 | [action-service](services/action-service) | Approval-gated actions + AI-agent tool surface | 🧪 scaffold |
+| [console](console) | Next.js reference UI: connect, upload, reconciliation review queue, ask, audit | ✅ real |
 
 ## Quick start
 
@@ -52,6 +53,7 @@ Then open:
 
 | URL | What |
 |---|---|
+| http://localhost:3300 | **Console** — connect, upload, work the reconciliation review queue, ask questions |
 | http://localhost:8088/docs | Unified FinSight API (Swagger, via Traefik → gateway) |
 | http://localhost:18081 | Standalone Swagger UI (committed aggregated spec) |
 | http://localhost:16686 | Jaeger traces |

@@ -277,6 +277,16 @@ services:
       - reconciliation-service
     ports: ["18000:8000"]
 
+  console:
+    build:
+      context: ./console
+      dockerfile: Dockerfile
+      args: {NEXT_PUBLIC_FINSIGHT_API_URL: "http://localhost:8088"}
+    restart: unless-stopped
+    depends_on: [api-gateway]
+    ports: ["3300:3000"]
+    networks: [finsight]
+
 networks:
   finsight: {}
 
