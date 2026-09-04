@@ -384,6 +384,82 @@ async def get_weights(
         }
 
 
+@app.get("/v1/reconciliation/summary", tags=["reconciliation"])
+async def summary(
+    principal: Principal = Depends(require_scopes("reconciliation:read")),
+) -> dict:
+    """Aggregate evidence for the latest run — what intelligence-service narrates from."""
+    async with db.session() as session:
+        latest = (
+            (
+                await session.execute(
+                    select(ReconciliationRun)
+                    .where(ReconciliationRun.tenant_id == principal.tenant_id)
+                    .order_by(ReconciliationRun.created_at.desc())
+                    .limit(1)
+                )
+            )
+            .scalars()
+            .first()
+        )
+        if latest is None:
+            return {"has_data": False}
+
+        unmatched = (
+            (
+                await session.execute(
+                    select(UnmatchedItem)
+                    .where(UnmatchedItem.run_id == latest.id)
+                    .order_by(UnmatchedItem.created_at.desc())
+                    .limit(10)
+                )
+            )
+            .scalars()
+            .all()
+        )
+        exception_matches = (
+            (
+                await session.execute(
+                    select(Match)
+                    .where(Match.run_id == latest.id, Match.match_type != "exact")
+                    .limit(10)
+                )
+            )
+            .scalars()
+            .all()
+        )
+        overdue_stmt = select(StoredRecord).where(
+            StoredRecord.tenant_id == principal.tenant_id,
+            StoredRecord.type == RecordType.invoice.value,
+            StoredRecord.matched.is_(False),
+        )
+        overdue = (await session.execute(overdue_stmt)).scalars().all()
+
+    return {
+        "has_data": True,
+        "run_id": latest.id,
+        "as_of": latest.created_at.isoformat(),
+        "matched": latest.matched,
+        "unmatched": latest.unmatched,
+        "exceptions": latest.exceptions,
+        "unmatched_items": [
+            {"record_id": u.record_id, "side": u.side, "reason": u.reason} for u in unmatched
+        ],
+        "exception_matches": [_match_out(m).model_dump() for m in exception_matches],
+        "open_invoices": [
+            {
+                "id": r.id,
+                "counterparty": r.counterparty,
+                "amount_minor": r.amount_minor,
+                "open_minor": r.amount_minor - (r.applied_minor or 0),
+                "currency": r.currency,
+                "occurred_at": r.occurred_at.isoformat(),
+            }
+            for r in overdue
+        ],
+    }
+
+
 @app.get("/v1/reconciliation/{run_id}", response_model=RunResult, tags=["reconciliation"])
 async def get_run(
     run_id: str,

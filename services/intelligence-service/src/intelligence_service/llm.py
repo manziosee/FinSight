@@ -27,19 +27,33 @@ class EchoProvider:
 
 
 class AnthropicProvider:
-    def __init__(self, model: str = "claude-sonnet-5") -> None:
+    def __init__(self, model: str = "claude-opus-5") -> None:
         self._model = model
 
     async def complete(self, system: str, prompt: str) -> str:
+        import anthropic
         from anthropic import AsyncAnthropic
 
         client = AsyncAnthropic()
-        msg = await client.messages.create(
-            model=self._model,
-            max_tokens=1024,
-            system=system,
-            messages=[{"role": "user", "content": prompt}],
-        )
+        try:
+            msg = await client.messages.create(
+                model=self._model,
+                max_tokens=2048,
+                system=system,
+                messages=[{"role": "user", "content": prompt}],
+            )
+        except anthropic.RateLimitError as exc:
+            _log.warning("llm.rate_limited", error=str(exc))
+            raise
+        except anthropic.APIStatusError as exc:
+            _log.error("llm.api_error", status=exc.status_code, error=str(exc))
+            raise
+        except anthropic.APIConnectionError as exc:
+            _log.error("llm.connection_error", error=str(exc))
+            raise
+        if msg.stop_reason == "refusal":
+            _log.warning("llm.refused", category=getattr(msg.stop_details, "category", None))
+            return "The assistant declined to answer this request."
         return "".join(block.text for block in msg.content if block.type == "text")
 
 

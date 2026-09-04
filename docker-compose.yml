@@ -241,7 +241,7 @@ services:
     environment:
       <<: *python-env
       FINSIGHT_LLM_PROVIDER: ${FINSIGHT_LLM_PROVIDER:-anthropic}
-      FINSIGHT_LLM_MODEL: ${FINSIGHT_LLM_MODEL:-claude-sonnet-5}
+      FINSIGHT_LLM_MODEL: ${FINSIGHT_LLM_MODEL:-claude-opus-5}
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
     expose: ["8000"]
 

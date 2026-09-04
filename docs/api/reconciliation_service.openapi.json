@@ -226,6 +226,30 @@
         }
       }
     },
+    "/v1/reconciliation/summary": {
+      "get": {
+        "tags": [
+          "reconciliation"
+        ],
+        "summary": "Summary",
+        "description": "Aggregate evidence for the latest run \u2014 what intelligence-service narrates from.",
+        "operationId": "summary_v1_reconciliation_summary_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Summary V1 Reconciliation Summary Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/reconciliation/{run_id}": {
       "get": {
         "tags": [
