@@ -11,6 +11,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 
+from finsight_common.audit import AuditMiddleware, AuditPublisher
 from finsight_common.config import ServiceSettings
 from finsight_common.errors import install_exception_handlers
 from finsight_common.health import ReadyCheck, build_health_router
@@ -43,6 +44,7 @@ def create_app(
     ready_checks: dict[str, ReadyCheck] | None = None,
     on_startup: Callable[[], Awaitable[None]] | None = None,
     on_shutdown: Callable[[], Awaitable[None]] | None = None,
+    audit_publisher: AuditPublisher | None = None,
 ) -> FastAPI:
     configure_logging(
         settings.service_name,
@@ -72,6 +74,10 @@ def create_app(
     )
 
     app.add_middleware(SecurityHeadersMiddleware)
+    if audit_publisher is not None:
+        app.add_middleware(
+            AuditMiddleware, service=settings.service_name, publisher=audit_publisher
+        )
     app.add_middleware(TrustedHostMiddleware, allowed_hosts=settings.trusted_hosts)
     app.add_middleware(
         CORSMiddleware,

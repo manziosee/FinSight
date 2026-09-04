@@ -23,7 +23,7 @@ class Settings(ServiceSettings):
     seed_scopes: str = (
         "data:write transactions:read transactions:write payments:match "
         "reconciliation:run reconciliation:read graph:read anomalies:read "
-        "financial:ask forecast:run actions:execute"
+        "financial:ask forecast:run actions:execute api-keys:write audit:read"
     )
 
 

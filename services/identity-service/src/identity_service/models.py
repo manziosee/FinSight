@@ -37,6 +37,22 @@ class OAuthClient(Base):
     created_at: Mapped[dt.datetime] = mapped_column(DateTime(timezone=True), default=_now)
 
 
+class AuditEvent(Base):
+    __tablename__ = "audit_events"
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True, default=_uuid)
+    tenant_id: Mapped[str] = mapped_column(String(64), index=True)
+    actor: Mapped[str] = mapped_column(String(128))
+    action: Mapped[str] = mapped_column(String(255))
+    resource: Mapped[str] = mapped_column(String(255))
+    outcome: Mapped[str] = mapped_column(String(16))
+    producer: Mapped[str] = mapped_column(String(64))
+    attributes: Mapped[dict] = mapped_column(Text, default="{}")
+    occurred_at: Mapped[dt.datetime] = mapped_column(
+        DateTime(timezone=True), default=_now, index=True
+    )
+
+
 class ApiKey(Base):
     __tablename__ = "api_keys"
 

@@ -32,6 +32,17 @@ class SigningKey:
             serialization.NoEncryption(),
         ).decode()
 
+    @property
+    def public_pem(self) -> str:
+        return (
+            self._private.public_key()
+            .public_bytes(
+                serialization.Encoding.PEM,
+                serialization.PublicFormat.SubjectPublicKeyInfo,
+            )
+            .decode()
+        )
+
     def jwks(self) -> dict:
         numbers = self._private.public_key().public_numbers()
         return {

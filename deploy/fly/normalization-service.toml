@@ -6,6 +6,9 @@ primary_region = "jnb"
 [build]
   dockerfile = "Dockerfile"
 
+[deploy]
+  release_command = "alembic -c services/normalization-service/alembic.ini upgrade head"
+
 [build.args]
   SERVICE = "normalization-service"
 

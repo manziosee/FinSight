@@ -44,6 +44,8 @@ class DataIngested(BaseModel):
 class TransactionNormalized(BaseModel):
     ingestion_id: str
     records: list[FinancialRecord]
+    warnings: list[str] = Field(default_factory=list)
+    source_recognised: bool = True
 
 
 class GraphUpdated(BaseModel):
@@ -78,6 +80,15 @@ class AuditRecorded(BaseModel):
     attributes: dict[str, Any] = Field(default_factory=dict)
 
 
+class MatchReviewed(BaseModel):
+    run_id: str
+    match_id: str
+    decision: Literal["accepted", "rejected", "corrected"]
+    reviewer: str
+    signals: dict[str, float] = Field(default_factory=dict)
+    corrected_invoice_id: str | None = None
+
+
 # --- topic registry -------------------------------------------------------
 
 
@@ -88,6 +99,7 @@ EVENT_TOPICS: dict[type[BaseModel], str] = {
     ReconciliationCompleted: "finsight.reconciliation.completed.v1",
     AnomalyDetected: "finsight.anomaly.detected.v1",
     AuditRecorded: "finsight.audit.recorded.v1",
+    MatchReviewed: "finsight.reconciliation.match-reviewed.v1",
 }
 
 
