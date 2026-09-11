@@ -3,7 +3,7 @@ name = "api-gateway"
 version = "0.1.0"
 description = "FinSight API gateway: auth, routing, unified OpenAPI"
 requires-python = ">=3.12"
-dependencies = ["finsight-common", "uvicorn[standard]>=0.30", "redis>=5.0"]
+dependencies = ["finsight-common", "uvicorn[standard]>=0.52.4", "redis>=5.0"]
 
 [build-system]
 requires = ["hatchling"]
