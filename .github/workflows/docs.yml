@@ -18,7 +18,7 @@ jobs:
       url: ${{ steps.deploy.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v6
+      - uses: astral-sh/setup-uv@v7
         with: {version: "0.9.30", enable-cache: true}
       - run: uv sync --all-packages --python 3.12
       - run: ./scripts/gen-openapi.sh
