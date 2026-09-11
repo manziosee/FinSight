@@ -5,7 +5,7 @@ description = "FinSight financial graph: build and query the entity relationship
 requires-python = ">=3.12"
 dependencies = [
     "finsight-common",
-    "uvicorn[standard]>=0.30",
+    "uvicorn[standard]>=0.52.4",
     "neo4j>=5.22",
 ]
 
