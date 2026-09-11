@@ -61,7 +61,7 @@ jobs:
         with:
           role-to-assume: ${{ vars.PRODUCTION_DEPLOY_ROLE_ARN }}
           aws-region: ${{ env.AWS_REGION }}
-      - uses: azure/setup-helm@v4
+      - uses: azure/setup-helm@v5
       - run: aws eks update-kubeconfig --name ${{ env.EKS_CLUSTER }} --region ${{ env.AWS_REGION }}
       - name: Helm upgrade (canary via Argo Rollouts if installed, else rolling)
         run: |

@@ -82,7 +82,7 @@ jobs:
         with:
           role-to-assume: ${{ vars.STAGING_DEPLOY_ROLE_ARN }}
           aws-region: ${{ env.AWS_REGION }}
-      - uses: azure/setup-helm@v4
+      - uses: azure/setup-helm@v5
       - name: Kubeconfig
         run: aws eks update-kubeconfig --name ${{ env.EKS_CLUSTER }} --region ${{ env.AWS_REGION }}
       - name: Helm upgrade (runs pre-upgrade migration Jobs)
