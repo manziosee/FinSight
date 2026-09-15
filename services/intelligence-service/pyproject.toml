@@ -5,7 +5,7 @@ description = "FinSight intelligence: understand / explain / ask, with bring-you
 requires-python = ">=3.12"
 dependencies = [
     "finsight-common",
-    "uvicorn[standard]>=0.30",
+    "uvicorn[standard]>=0.52.4",
     "anthropic>=1.4.0",
 ]
 
