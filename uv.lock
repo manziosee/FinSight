@@ -36,7 +36,7 @@ dependencies = [
 [package.metadata]
 requires-dist = [
     { name = "finsight-common", editable = "libs/finsight-common" },
-    { name = "uvicorn", extras = ["standard"], specifier = ">=0.30" },
+    { name = "uvicorn", extras = ["standard"], specifier = ">=0.52.4" },
 ]
 
 [[package]]
@@ -301,7 +301,7 @@ dependencies = [
 requires-dist = [
     { name = "finsight-common", editable = "libs/finsight-common" },
     { name = "numpy", specifier = ">=2.5.3" },
-    { name = "uvicorn", extras = ["standard"], specifier = ">=0.30" },
+    { name = "uvicorn", extras = ["standard"], specifier = ">=0.52.4" },
 ]
 
 [[package]]
@@ -349,7 +349,7 @@ dependencies = [
 requires-dist = [
     { name = "finsight-common", editable = "libs/finsight-common" },
     { name = "redis", specifier = ">=5.0" },
-    { name = "uvicorn", extras = ["standard"], specifier = ">=0.30" },
+    { name = "uvicorn", extras = ["standard"], specifier = ">=0.52.4" },
 ]
 
 [[package]]
@@ -1172,7 +1172,7 @@ dependencies = [
 requires-dist = [
     { name = "finsight-common", editable = "libs/finsight-common" },
     { name = "numpy", specifier = ">=2.5.3" },
-    { name = "uvicorn", extras = ["standard"], specifier = ">=0.30" },
+    { name = "uvicorn", extras = ["standard"], specifier = ">=0.52.4" },
 ]
 
 [[package]]
@@ -1290,7 +1290,7 @@ dependencies = [
 requires-dist = [
     { name = "finsight-common", editable = "libs/finsight-common" },
     { name = "neo4j", specifier = ">=5.22" },
-    { name = "uvicorn", extras = ["standard"], specifier = ">=0.30" },
+    { name = "uvicorn", extras = ["standard"], specifier = ">=0.52.4" },
 ]
 
 [[package]]
@@ -1531,7 +1531,7 @@ requires-dist = [
     { name = "argon2-cffi", specifier = ">=23.1" },
     { name = "finsight-common", editable = "libs/finsight-common" },
     { name = "python-multipart", specifier = ">=0.0.9" },
-    { name = "uvicorn", extras = ["standard"], specifier = ">=0.30" },
+    { name = "uvicorn", extras = ["standard"], specifier = ">=0.52.4" },
 ]
 
 [[package]]
@@ -1561,7 +1561,7 @@ requires-dist = [
     { name = "alembic", specifier = ">=1.19.2" },
     { name = "finsight-common", editable = "libs/finsight-common" },
     { name = "python-multipart", specifier = ">=0.0.9" },
-    { name = "uvicorn", extras = ["standard"], specifier = ">=0.30" },
+    { name = "uvicorn", extras = ["standard"], specifier = ">=0.52.4" },
 ]
 
 [[package]]
@@ -1587,7 +1587,7 @@ dependencies = [
 requires-dist = [
     { name = "anthropic", specifier = ">=1.4.0" },
     { name = "finsight-common", editable = "libs/finsight-common" },
-    { name = "uvicorn", extras = ["standard"], specifier = ">=0.30" },
+    { name = "uvicorn", extras = ["standard"], specifier = ">=0.52.4" },
 ]
 
 [[package]]
@@ -2148,7 +2148,7 @@ requires-dist = [
     { name = "pypdf", specifier = ">=5.0" },
     { name = "python-dateutil", specifier = ">=2.9" },
     { name = "rapidfuzz", specifier = ">=3.9" },
-    { name = "uvicorn", extras = ["standard"], specifier = ">=0.30" },
+    { name = "uvicorn", extras = ["standard"], specifier = ">=0.52.4" },
 ]
 
 [[package]]
@@ -3057,7 +3057,7 @@ requires-dist = [
     { name = "alembic", specifier = ">=1.19.2" },
     { name = "finsight-common", editable = "libs/finsight-common" },
     { name = "rapidfuzz", specifier = ">=3.9" },
-    { name = "uvicorn", extras = ["standard"], specifier = ">=0.30" },
+    { name = "uvicorn", extras = ["standard"], specifier = ">=0.52.4" },
 ]
 
 [[package]]

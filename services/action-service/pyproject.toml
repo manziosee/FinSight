@@ -5,7 +5,7 @@ description = "FinSight action layer: approval-gated execution and the AI-agent 
 requires-python = ">=3.12"
 dependencies = [
     "finsight-common",
-    "uvicorn[standard]>=0.30",
+    "uvicorn[standard]>=0.52.4",
 ]
 
 [build-system]
