@@ -15,7 +15,7 @@ jobs:
   secrets:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with: {fetch-depth: 0}
       - uses: gitleaks/gitleaks-action@v3
         env:
@@ -24,7 +24,7 @@ jobs:
   python-sast:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: astral-sh/setup-uv@v7
         with: {version: "0.9.30", enable-cache: true}
       - run: uv sync --all-packages --python 3.12
@@ -38,7 +38,7 @@ jobs:
     container:
       image: semgrep/semgrep:latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Semgrep scan (report only)
         run: semgrep scan --config p/default --config p/python --config p/secrets --error --sarif --output semgrep.sarif || true
       - name: Upload Semgrep SARIF
@@ -61,7 +61,7 @@ jobs:
                   graph-service, reconciliation-service, intelligence-service, anomaly-service,
                   forecast-service, action-service]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: docker/setup-buildx-action@v3
       - uses: docker/build-push-action@v7
         with:
@@ -82,7 +82,7 @@ jobs:
   iac:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Checkov (report only)
         uses: bridgecrewio/checkov-action@v12
         continue-on-error: true
