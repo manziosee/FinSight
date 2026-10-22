@@ -82,6 +82,18 @@ export interface IngestionAccepted {
   ingestion_id: string;
   status: string;
   s3_uri: string;
+  status_url: string;
+}
+
+export interface IngestionStatus {
+  ingestion_id: string;
+  status: "received" | "completed" | "failed";
+  source: string;
+  record_count: number;
+  warnings: string[];
+  error_summary: string | null;
+  created_at: string;
+  completed_at: string | null;
 }
 
 export async function uploadFile(file: File, source: string): Promise<IngestionAccepted> {
@@ -91,6 +103,10 @@ export async function uploadFile(file: File, source: string): Promise<IngestionA
     method: "POST",
     body: form,
   });
+}
+
+export async function getIngestion(ingestionId: string): Promise<IngestionStatus> {
+  return request<IngestionStatus>(`/v1/data/ingestions/${encodeURIComponent(ingestionId)}`);
 }
 
 // --- reconciliation -------------------------------------------------------

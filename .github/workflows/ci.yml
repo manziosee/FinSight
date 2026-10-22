@@ -25,7 +25,8 @@ jobs:
         with:
           version: ${{ env.UV_VERSION }}
           enable-cache: true
-      - run: uv sync --all-packages --python ${{ env.PYTHON_VERSION }}
+      - run: uv lock --check
+      - run: uv sync --all-packages --frozen --python ${{ env.PYTHON_VERSION }}
       - run: uv run ruff check --output-format=github .
       - run: uv run ruff format --check .
       - run: uv run mypy libs services || true  # non-blocking until fully typed
@@ -38,7 +39,8 @@ jobs:
         with:
           version: ${{ env.UV_VERSION }}
           enable-cache: true
-      - run: uv sync --all-packages --python ${{ env.PYTHON_VERSION }}
+      - run: uv lock --check
+      - run: uv sync --all-packages --frozen --python ${{ env.PYTHON_VERSION }}
       - run: uv run pytest -m "not integration" --cov --cov-report=xml --junitxml=junit.xml
       - uses: actions/upload-artifact@v4
         if: always()
@@ -54,12 +56,13 @@ jobs:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v7
         with: {version: "${{ env.UV_VERSION }}", enable-cache: true}
-      - run: uv sync --all-packages --python ${{ env.PYTHON_VERSION }}
+      - run: uv lock --check
+      - run: uv sync --all-packages --frozen --python ${{ env.PYTHON_VERSION }}
       - run: ./scripts/gen-openapi.sh
-      - name: Fail if the committed spec is stale
-        run: git diff --exit-code docs/api/finsight.openapi.json
+      - name: Fail if committed API specs are stale
+        run: git diff --exit-code -- docs/api
       - name: Lint the API spec
-        run: npx --yes @stoplight/spectral-cli lint docs/api/finsight.openapi.json --ruleset .spectral.yaml || true
+        run: npx --yes @stoplight/spectral-cli lint docs/api/finsight.openapi.json --ruleset .spectral.yaml
 
   console:
     runs-on: ubuntu-latest

@@ -5,7 +5,7 @@ from __future__ import annotations
 from functools import lru_cache
 from typing import Literal
 
-from pydantic import Field
+from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 Environment = Literal["local", "test", "staging", "production"]
@@ -25,6 +25,28 @@ class ServiceSettings(BaseSettings):
     env: Environment = "local"
     log_level: str = "INFO"
     debug: bool = False
+
+    # Neutral fallbacks only. Real records should carry their own currency and timezone.
+    # XXX is the ISO 4217 code for an unknown/no currency; it avoids silently labeling
+    # records from another country as USD.
+    default_currency: str = Field(default="XXX", min_length=3, max_length=3)
+    default_timezone: str = "UTC"
+
+    @field_validator("default_currency")
+    @classmethod
+    def _normalize_default_currency(cls, value: str) -> str:
+        return value.upper()
+
+    @field_validator("default_timezone")
+    @classmethod
+    def _validate_default_timezone(cls, value: str) -> str:
+        from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
+
+        try:
+            ZoneInfo(value)
+        except (ZoneInfoNotFoundError, ValueError) as exc:
+            raise ValueError("default_timezone must be a valid IANA timezone") from exc
+        return value
 
     # Observability
     otel_exporter_otlp_endpoint: str | None = None

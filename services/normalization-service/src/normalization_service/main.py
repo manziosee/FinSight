@@ -17,7 +17,13 @@ from finsight_common.events import (
     topic_for,
 )
 from finsight_common.logging import get_logger
-from finsight_common.messaging import KafkaConnection, KafkaEventBus
+from finsight_common.messaging import (
+    KafkaConnection,
+    KafkaEventBus,
+    OutboxRelay,
+    SqlOutboxStore,
+    enqueue_event,
+)
 from finsight_common.schemas import FinancialRecord
 from normalization_service import __version__
 from normalization_service.config import get_settings
@@ -32,6 +38,7 @@ bus = KafkaEventBus(
     group_id="normalization-service",
 )
 _consumer_task: asyncio.Task | None = None
+_relay_task: asyncio.Task | None = None
 _s3_session = aioboto3.Session()
 
 # lazy DB (only used for entity resolution + idempotency)
@@ -87,8 +94,21 @@ async def _on_data_ingested(body: dict) -> None:
         ingestion_id=ev.ingestion_id,
         source=ev.source,
         s3_key=ev.s3_key,
+        default_currency=settings.default_currency,
+        default_timezone=settings.default_timezone,
     )
 
+    normalized_event = EventEnvelope[TransactionNormalized](
+        type="transaction.normalized",
+        tenant_id=env.tenant_id,
+        producer="normalization-service",
+        data=TransactionNormalized(
+            ingestion_id=ev.ingestion_id,
+            records=result.records,
+            warnings=result.warnings,
+            source_recognised=result.recognised,
+        ),
+    )
     async with db.session() as session:
         await EntityResolver(session, env.tenant_id).apply(result.records)
         session.add(
@@ -98,6 +118,7 @@ async def _on_data_ingested(body: dict) -> None:
                 record_count=len(result.records),
             )
         )
+        enqueue_event(session, normalized_event)
 
     log.info(
         "normalized",
@@ -106,34 +127,23 @@ async def _on_data_ingested(body: dict) -> None:
         warnings=result.warnings,
         recognised=result.recognised,
     )
-    await bus.publish(
-        EventEnvelope[TransactionNormalized](
-            type="transaction.normalized",
-            tenant_id=env.tenant_id,
-            producer="normalization-service",
-            data=TransactionNormalized(
-                ingestion_id=ev.ingestion_id,
-                records=result.records,
-                warnings=result.warnings,
-                source_recognised=result.recognised,
-            ),
-        )
-    )
-
-
 async def _startup() -> None:
     db = _database()
     if not settings.is_production:
         await db.create_all()
     await bus.start()
     bus.subscribe(topic_for(DataIngested), _on_data_ingested)
-    global _consumer_task
+    global _consumer_task, _relay_task
+    relay = OutboxRelay(SqlOutboxStore(db.sessionmaker), bus.producer)
+    _relay_task = asyncio.create_task(relay.run())
     _consumer_task = asyncio.create_task(bus.run_consumers())
 
 
 async def _shutdown() -> None:
     if _consumer_task:
         _consumer_task.cancel()
+    if _relay_task:
+        _relay_task.cancel()
     await bus.stop()
     if _db is not None:
         await _db.dispose()  # type: ignore[attr-defined]
@@ -185,6 +195,8 @@ async def understand(
         ingestion_id="inline",
         source=body.source,
         s3_key="inline",
+        default_currency=settings.default_currency,
+        default_timezone=settings.default_timezone,
     )
     if not result.records:
         from finsight_common.errors import FinSightError

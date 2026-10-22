@@ -174,6 +174,9 @@ class KafkaEventBus:
             )
         except Exception:
             _log.exception("event.dlq_publish_failed", topic=dlq_topic)
+            # Do not let the consumer commit the source offset if the failed event
+            # could not be durably copied to its DLQ. The broker can redeliver it.
+            raise
 
 
 class NullEventBus:

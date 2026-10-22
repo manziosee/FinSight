@@ -16,24 +16,18 @@ export FINSIGHT_ENV="test"
 
 uv run --python 3.12 python - "$OUT" "${SERVICES[@]}" <<'EOF'
 import importlib, json, sys
+from api_gateway.openapi import merge_openapi_specs
 
 out_dir, *modules = sys.argv[1:]
-merged = {
-    "openapi": "3.1.0",
-    "info": {"title": "FinSight API", "version": "v1",
-             "description": "Unified financial intelligence API (generated)."},
-    "paths": {}, "components": {"schemas": {}},
-}
+specs = {}
 for mod in modules:
     app = importlib.import_module(f"{mod}.main").app
     spec = app.openapi()
     with open(f"{out_dir}/{mod}.openapi.json", "w") as fh:
         json.dump(spec, fh, indent=2)
-    for path, item in spec.get("paths", {}).items():
-        if path.startswith(("/v1/", "/.well-known/")):
-            merged["paths"].setdefault(path, {}).update(item)
-    for name, schema in spec.get("components", {}).get("schemas", {}).items():
-        merged["components"]["schemas"].setdefault(name, schema)
+    specs[mod.removesuffix("_service")] = spec
+
+merged = merge_openapi_specs(specs)
 
 with open(f"{out_dir}/finsight.openapi.json", "w") as fh:
     json.dump(merged, fh, indent=2)

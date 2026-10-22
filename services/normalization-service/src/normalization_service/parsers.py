@@ -15,7 +15,8 @@ import json
 import re
 from collections.abc import Iterable, Sequence
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import UTC, datetime
+from zoneinfo import ZoneInfo
 
 from dateutil import parser as dateparser
 
@@ -159,13 +160,17 @@ def _to_minor_units(raw: str | int | float | None) -> int:
     return -val if neg else val
 
 
-def _parse_date(raw: str | None) -> datetime:
+def _parse_date(raw: str | None, default_timezone: str = "UTC") -> datetime:
+    source_tz = ZoneInfo(default_timezone)
     if not raw:
-        return datetime.now().astimezone()
+        return datetime.now(UTC)
     try:
-        return dateparser.parse(str(raw), dayfirst=True).astimezone()
+        parsed = dateparser.parse(str(raw), dayfirst=True)
+        if parsed.tzinfo is None:
+            parsed = parsed.replace(tzinfo=source_tz)
+        return parsed.astimezone(UTC)
     except (ValueError, OverflowError, TypeError):
-        return datetime.now().astimezone()
+        return datetime.now(UTC)
 
 
 def _classify(description: str | None, ref: str | None, explicit: str | None) -> RecordType:
@@ -240,6 +245,8 @@ def _row_to_record(
     source: str,
     s3_key: str,
     locator: str,
+    default_currency: str,
+    default_timezone: str,
 ) -> FinancialRecord:
     credit = _to_minor_units(_first(row, _CREDIT_KEYS))
     debit = _to_minor_units(_first(row, _DEBIT_KEYS))
@@ -256,7 +263,7 @@ def _row_to_record(
 
     description = _first(row, _DESC_KEYS)
     ref = _extract_ref(description, _first(row, _REF_KEYS))
-    currency = (_first(row, _CURRENCY_KEYS) or "USD")[:3].upper()
+    currency = (_first(row, _CURRENCY_KEYS) or default_currency)[:3].upper()
     party_name = _first(row, _PARTY_KEYS) or _party_from_description(description)
 
     try:
@@ -278,7 +285,7 @@ def _row_to_record(
         source=src,
         amount=Money(minor_units=minor, currency=currency),
         direction=direction,
-        occurred_at=_parse_date(_first(row, _DATE_KEYS)),
+        occurred_at=_parse_date(_first(row, _DATE_KEYS), default_timezone),
         description=description,
         reference=ref,
         counterparty=Party(name=party_name, normalized_name=_normalize_name(party_name))
@@ -312,6 +319,8 @@ def _emit(
     source: str,
     s3_key: str,
     prefix: str,
+    default_currency: str,
+    default_timezone: str,
 ) -> list[FinancialRecord]:
     return [
         _row_to_record(
@@ -321,6 +330,8 @@ def _emit(
             source=source,
             s3_key=s3_key,
             locator=f"{prefix}{i}",
+            default_currency=default_currency,
+            default_timezone=default_timezone,
         )
         for i, row in enumerate(rows)
     ]
@@ -405,6 +416,8 @@ def parse_document(
     ingestion_id: str,
     source: str,
     s3_key: str,
+    default_currency: str = "XXX",
+    default_timezone: str = "UTC",
 ) -> ParseResult:
     ct = content_type.lower()
     warnings: list[str] = []
@@ -435,6 +448,12 @@ def parse_document(
     if not rows:
         return ParseResult(warnings=warnings or ["no rows found"], recognised=bool(warnings))
 
+    missing_currency = sum(not _first(row, _CURRENCY_KEYS) for row in rows)
+    if missing_currency and default_currency == "XXX":
+        warnings.append(
+            f"{missing_currency} row(s) had no currency; marked as XXX (unknown currency)"
+        )
+
     records = _emit(
         rows,
         tenant_id=tenant_id,
@@ -442,6 +461,8 @@ def parse_document(
         source=source,
         s3_key=s3_key,
         prefix=prefix if prefix != "json[" else "json[",
+        default_currency=default_currency,
+        default_timezone=default_timezone,
     )
     if prefix == "json[":
         for r in records:
@@ -455,7 +476,15 @@ def parse_document(
 
 
 def parse_bytes(
-    body: bytes, *, content_type: str, tenant_id: str, ingestion_id: str, source: str, s3_key: str
+    body: bytes,
+    *,
+    content_type: str,
+    tenant_id: str,
+    ingestion_id: str,
+    source: str,
+    s3_key: str,
+    default_currency: str = "XXX",
+    default_timezone: str = "UTC",
 ) -> ParseResult:
     """Backwards-compatible wrapper — behaves like a list of records."""
     return parse_document(
@@ -465,4 +494,6 @@ def parse_bytes(
         ingestion_id=ingestion_id,
         source=source,
         s3_key=s3_key,
+        default_currency=default_currency,
+        default_timezone=default_timezone,
     )

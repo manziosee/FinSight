@@ -3,7 +3,13 @@
 import Link from "next/link";
 import { useState } from "react";
 import { useAuth } from "@/lib/auth";
-import { ApiError, type IngestionAccepted, uploadFile } from "@/lib/api";
+import {
+  ApiError,
+  type IngestionAccepted,
+  type IngestionStatus,
+  getIngestion,
+  uploadFile,
+} from "@/lib/api";
 
 const SOURCES = ["bank", "mobile_money", "erp", "accounting", "pos", "spreadsheet"];
 
@@ -13,6 +19,7 @@ export default function UploadPage() {
   const [source, setSource] = useState("bank");
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState<IngestionAccepted | null>(null);
+  const [ingestionStatus, setIngestionStatus] = useState<IngestionStatus | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   async function onSubmit(e: React.FormEvent) {
@@ -21,8 +28,17 @@ export default function UploadPage() {
     setBusy(true);
     setError(null);
     setResult(null);
+    setIngestionStatus(null);
     try {
-      setResult(await uploadFile(file, source));
+      const accepted = await uploadFile(file, source);
+      setResult(accepted);
+      let current = await getIngestion(accepted.ingestion_id);
+      setIngestionStatus(current);
+      for (let attempt = 0; current.status === "received" && attempt < 30; attempt += 1) {
+        await new Promise((resolve) => setTimeout(resolve, 2000));
+        current = await getIngestion(accepted.ingestion_id);
+        setIngestionStatus(current);
+      }
     } catch (err) {
       setError(err instanceof ApiError ? err.detail : String(err));
     } finally {
@@ -90,7 +106,21 @@ export default function UploadPage() {
 
         {result && (
           <div style={{ marginTop: 18 }}>
-            <p style={{ color: "var(--ok)" }}>Accepted — {result.status}</p>
+            <p style={{ color: ingestionStatus?.status === "failed" ? "var(--err)" : "var(--ok)" }}>
+              {ingestionStatus?.status === "completed"
+                ? `Processed ${ingestionStatus.record_count} records`
+                : ingestionStatus?.status === "failed"
+                  ? "Processing failed"
+                  : "Accepted — processing"}
+            </p>
+            {ingestionStatus?.error_summary && (
+              <div className="error-box">{ingestionStatus.error_summary}</div>
+            )}
+            {ingestionStatus && ingestionStatus.warnings.length > 0 && (
+              <ul className="muted">
+                {ingestionStatus.warnings.map((warning, index) => <li key={index}>{warning}</li>)}
+              </ul>
+            )}
             <table>
               <tbody>
                 <tr>
@@ -108,8 +138,13 @@ export default function UploadPage() {
               </tbody>
             </table>
             <p className="muted" style={{ fontSize: 13, marginTop: 10 }}>
-              Give the pipeline a few seconds, then go to{" "}
-              <Link href="/reconciliation">Reconciliation</Link> and run it.
+              {ingestionStatus?.status === "completed" ? (
+                <>Continue to <Link href="/reconciliation">Reconciliation</Link> when ready.</>
+              ) : ingestionStatus?.status === "failed" ? (
+                "Review the processing error and warnings above, then correct the source data."
+              ) : (
+                "Processing is still underway. This page checks for completion for up to one minute."
+              )}
             </p>
           </div>
         )}

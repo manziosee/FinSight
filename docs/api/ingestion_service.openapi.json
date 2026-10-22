@@ -147,6 +147,49 @@
           }
         }
       }
+    },
+    "/v1/data/ingestions/{ingestion_id}": {
+      "get": {
+        "tags": [
+          "ingestion"
+        ],
+        "summary": "Get Ingestion",
+        "description": "Get the status and normalization result for an ingestion owned by this tenant.",
+        "operationId": "get_ingestion_v1_data_ingestions__ingestion_id__get",
+        "parameters": [
+          {
+            "name": "ingestion_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Ingestion Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IngestionStatusResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -214,18 +257,28 @@
           },
           "status": {
             "type": "string",
-            "title": "Status"
+            "enum": [
+              "received"
+            ],
+            "title": "Status",
+            "description": "The batch has been durably accepted."
           },
           "s3_uri": {
             "type": "string",
             "title": "S3 Uri"
+          },
+          "status_url": {
+            "type": "string",
+            "title": "Status Url",
+            "description": "Relative API path to poll for processing results."
           }
         },
         "type": "object",
         "required": [
           "ingestion_id",
           "status",
-          "s3_uri"
+          "s3_uri",
+          "status_url"
         ],
         "title": "IngestionAccepted"
       },
@@ -268,6 +321,78 @@
           "type"
         ],
         "title": "ValidationError"
+      },
+      "IngestionStatusResponse": {
+        "properties": {
+          "ingestion_id": {
+            "type": "string",
+            "title": "Ingestion Id"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "received",
+              "completed",
+              "failed"
+            ],
+            "title": "Status",
+            "description": "Current asynchronous processing state."
+          },
+          "source": {
+            "type": "string",
+            "title": "Source"
+          },
+          "record_count": {
+            "type": "integer",
+            "title": "Record Count"
+          },
+          "warnings": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Warnings",
+            "description": "Non-fatal parsing and normalization warnings."
+          },
+          "error_summary": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error Summary"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "completed_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Completed At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "ingestion_id",
+          "status",
+          "source",
+          "record_count",
+          "warnings",
+          "created_at"
+        ],
+        "title": "IngestionStatusResponse"
       }
     }
   }

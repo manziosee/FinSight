@@ -27,17 +27,35 @@ PATHS=$(curl -sf "${BASE}/openapi.json" | $PY -c "import sys,json;d=json.load(sy
 [ "${PATHS:-0}" -ge 5 ] || fail "aggregated spec has too few paths ($PATHS)"
 pass "aggregated spec exposes $PATHS paths"
 
-echo "[4/6] upload demo data"
-curl -sf -X POST "${BASE}/v1/data/upload?source=erp" -H "Authorization: Bearer ${TOKEN}" \
-  -F "file=@scripts/demo-data/invoices.csv;type=text/csv" >/dev/null || fail "invoice upload"
-curl -sf -X POST "${BASE}/v1/data/upload?source=bank" -H "Authorization: Bearer ${TOKEN}" \
-  -F "file=@scripts/demo-data/bank-statement.csv;type=text/csv" >/dev/null || fail "bank upload"
+echo "[4/7] upload demo data"
+INVOICE_INGESTION=$(curl -sf -X POST "${BASE}/v1/data/upload?source=erp" \
+  -H "Authorization: Bearer ${TOKEN}" \
+  -F "file=@scripts/demo-data/invoices.csv;type=text/csv") || fail "invoice upload"
+BANK_INGESTION=$(curl -sf -X POST "${BASE}/v1/data/upload?source=bank" \
+  -H "Authorization: Bearer ${TOKEN}" \
+  -F "file=@scripts/demo-data/bank-statement.csv;type=text/csv") || fail "bank upload"
+INVOICE_ID=$(echo "$INVOICE_INGESTION" | $PY -c "import sys,json;print(json.load(sys.stdin)['ingestion_id'])")
+BANK_ID=$(echo "$BANK_INGESTION" | $PY -c "import sys,json;print(json.load(sys.stdin)['ingestion_id'])")
 pass "uploads accepted (202)"
 
-echo "[5/6] wait for async pipeline, then reconcile (polls up to ~60s)"
+echo "[5/7] poll ingestion status"
+for ingestion_id in "$INVOICE_ID" "$BANK_ID"; do
+  STATUS="received"
+  for attempt in $(seq 1 30); do
+    RESPONSE=$(curl -sf "${BASE}/v1/data/ingestions/${ingestion_id}" \
+      -H "Authorization: Bearer ${TOKEN}") || fail "ingestion status lookup"
+    STATUS=$(echo "$RESPONSE" | $PY -c "import sys,json;print(json.load(sys.stdin)['status'])")
+    [ "$STATUS" = "completed" ] && break
+    [ "$STATUS" = "failed" ] && fail "normalization failed: $RESPONSE"
+    sleep 2
+  done
+  [ "$STATUS" = "completed" ] || fail "ingestion did not complete: $ingestion_id"
+done
+pass "both ingestions completed"
+
+echo "[6/7] reconcile uploaded records"
 RESULT=""
 for attempt in $(seq 1 12); do
-  sleep 5
   RESULT=$(curl -s -X POST "${BASE}/v1/reconciliation/run" -H "Authorization: Bearer ${TOKEN}" \
     -H "Content-Type: application/json" -d '{"scope":"payment_invoice"}')
   MATCHED=$(echo "$RESULT" | $PY -c "import sys,json;print(json.load(sys.stdin).get('matched',0))" 2>/dev/null || echo 0)
@@ -54,7 +72,7 @@ assert strong, f"no high-confidence explained match: {matches}"
 print(f"  ok - {len(matches)} matches, best confidence {max(m['confidence'] for m in matches):.2f}")
 EOF
 
-echo "[6/6] graph entity lookup"
+echo "[7/7] graph entity lookup"
 curl -sf "${BASE}/v1/graph/entities/cust_abc?depth=3" -H "Authorization: Bearer ${TOKEN}" \
   | $PY -c "import sys,json;d=json.load(sys.stdin);print('  ok - connected nodes:', len(d.get('connected',[])))" \
   || echo "  warn - graph lookup returned no data (non-fatal in CI without neo4j warmup)"

@@ -3,8 +3,13 @@
   "info": {
     "title": "FinSight API",
     "version": "v1",
-    "description": "Unified financial intelligence API (generated)."
+    "description": "Unified financial intelligence API. Aggregated from FinSight services."
   },
+  "servers": [
+    {
+      "url": "/"
+    }
+  ],
   "paths": {
     "/v1/auth/token": {
       "post": {
@@ -17,7 +22,7 @@
           "content": {
             "application/x-www-form-urlencoded": {
               "schema": {
-                "$ref": "#/components/schemas/Body_token_v1_auth_token_post"
+                "$ref": "#/components/schemas/identity_Body_token_v1_auth_token_post"
               }
             }
           },
@@ -29,7 +34,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/TokenResponse"
+                  "$ref": "#/components/schemas/identity_TokenResponse"
                 }
               }
             }
@@ -39,12 +44,13 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/identity_HTTPValidationError"
                 }
               }
             }
           }
-        }
+        },
+        "security": []
       }
     },
     "/v1/api-keys": {
@@ -58,7 +64,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/ApiKeyCreate"
+                "$ref": "#/components/schemas/identity_ApiKeyCreate"
               }
             }
           },
@@ -70,7 +76,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ApiKeyCreated"
+                  "$ref": "#/components/schemas/identity_ApiKeyCreated"
                 }
               }
             }
@@ -80,7 +86,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/identity_HTTPValidationError"
                 }
               }
             }
@@ -108,7 +114,8 @@
               }
             }
           }
-        }
+        },
+        "security": []
       }
     },
     "/v1/audit": {
@@ -139,7 +146,7 @@
                 "schema": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/components/schemas/AuditEntry"
+                    "$ref": "#/components/schemas/identity_AuditEntry"
                   },
                   "title": "Response List Audit V1 Audit Get"
                 }
@@ -151,7 +158,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/identity_HTTPValidationError"
                 }
               }
             }
@@ -170,7 +177,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/IngestJson"
+                "$ref": "#/components/schemas/ingestion_IngestJson"
               }
             }
           },
@@ -182,7 +189,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/IngestionAccepted"
+                  "$ref": "#/components/schemas/ingestion_IngestionAccepted"
                 }
               }
             }
@@ -192,7 +199,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/ingestion_HTTPValidationError"
                 }
               }
             }
@@ -224,7 +231,7 @@
           "content": {
             "multipart/form-data": {
               "schema": {
-                "$ref": "#/components/schemas/Body_upload_v1_data_upload_post"
+                "$ref": "#/components/schemas/ingestion_Body_upload_v1_data_upload_post"
               }
             }
           }
@@ -235,7 +242,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/IngestionAccepted"
+                  "$ref": "#/components/schemas/ingestion_IngestionAccepted"
                 }
               }
             }
@@ -245,7 +252,50 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/ingestion_HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/data/ingestions/{ingestion_id}": {
+      "get": {
+        "tags": [
+          "ingestion"
+        ],
+        "summary": "Get Ingestion",
+        "description": "Get the status and normalization result for an ingestion owned by this tenant.",
+        "operationId": "get_ingestion_v1_data_ingestions__ingestion_id__get",
+        "parameters": [
+          {
+            "name": "ingestion_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Ingestion Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ingestion_IngestionStatusResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ingestion_HTTPValidationError"
                 }
               }
             }
@@ -264,7 +314,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/UnderstandRequest"
+                "$ref": "#/components/schemas/normalization_UnderstandRequest"
               }
             }
           },
@@ -276,7 +326,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/UnderstandResponse"
+                  "$ref": "#/components/schemas/normalization_UnderstandResponse"
                 }
               }
             }
@@ -286,7 +336,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/normalization_HTTPValidationError"
                 }
               }
             }
@@ -330,7 +380,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/EntityView"
+                  "$ref": "#/components/schemas/graph_EntityView"
                 }
               }
             }
@@ -340,7 +390,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/graph_HTTPValidationError"
                 }
               }
             }
@@ -393,7 +443,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/graph_HTTPValidationError"
                 }
               }
             }
@@ -412,7 +462,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/RunRequest"
+                "$ref": "#/components/schemas/reconciliation_RunRequest"
               }
             }
           },
@@ -424,7 +474,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/RunResult"
+                  "$ref": "#/components/schemas/reconciliation_RunResult"
                 }
               }
             }
@@ -434,7 +484,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/reconciliation_HTTPValidationError"
                 }
               }
             }
@@ -478,7 +528,7 @@
                 "schema": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/components/schemas/MatchOut"
+                    "$ref": "#/components/schemas/reconciliation_MatchOut"
                   },
                   "title": "Response Review Queue V1 Reconciliation  Run Id  Matches Get"
                 }
@@ -490,7 +540,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/reconciliation_HTTPValidationError"
                 }
               }
             }
@@ -521,7 +571,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/ReviewRequest"
+                "$ref": "#/components/schemas/reconciliation_ReviewRequest"
               }
             }
           }
@@ -532,7 +582,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/MatchOut"
+                  "$ref": "#/components/schemas/reconciliation_MatchOut"
                 }
               }
             }
@@ -542,7 +592,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/reconciliation_HTTPValidationError"
                 }
               }
             }
@@ -621,7 +671,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/RunResult"
+                  "$ref": "#/components/schemas/reconciliation_RunResult"
                 }
               }
             }
@@ -631,7 +681,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/reconciliation_HTTPValidationError"
                 }
               }
             }
@@ -650,7 +700,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/PairRequest"
+                "$ref": "#/components/schemas/reconciliation_PairRequest"
               }
             }
           },
@@ -662,7 +712,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/MatchOut"
+                  "$ref": "#/components/schemas/reconciliation_MatchOut"
                 }
               }
             }
@@ -672,7 +722,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/reconciliation_HTTPValidationError"
                 }
               }
             }
@@ -691,7 +741,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/ExplainRequest"
+                "$ref": "#/components/schemas/intelligence_ExplainRequest"
               }
             }
           },
@@ -703,7 +753,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Answer"
+                  "$ref": "#/components/schemas/intelligence_Answer"
                 }
               }
             }
@@ -713,7 +763,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/intelligence_HTTPValidationError"
                 }
               }
             }
@@ -732,7 +782,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/AskRequest"
+                "$ref": "#/components/schemas/intelligence_AskRequest"
               }
             }
           },
@@ -744,7 +794,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Answer"
+                  "$ref": "#/components/schemas/intelligence_Answer"
                 }
               }
             }
@@ -754,7 +804,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/intelligence_HTTPValidationError"
                 }
               }
             }
@@ -773,7 +823,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/DetectRequest"
+                "$ref": "#/components/schemas/anomaly_DetectRequest"
               }
             }
           },
@@ -786,7 +836,7 @@
               "application/json": {
                 "schema": {
                   "items": {
-                    "$ref": "#/components/schemas/Finding"
+                    "$ref": "#/components/schemas/anomaly_Finding"
                   },
                   "type": "array",
                   "title": "Response Detect V1 Anomalies Detect Post"
@@ -799,7 +849,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/anomaly_HTTPValidationError"
                 }
               }
             }
@@ -818,7 +868,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/Finding"
+                "$ref": "#/components/schemas/anomaly_Finding"
               }
             }
           },
@@ -842,7 +892,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/anomaly_HTTPValidationError"
                 }
               }
             }
@@ -861,7 +911,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/ForecastRequest"
+                "$ref": "#/components/schemas/forecast_ForecastRequest"
               }
             }
           },
@@ -873,7 +923,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ForecastResponse"
+                  "$ref": "#/components/schemas/forecast_ForecastResponse"
                 }
               }
             }
@@ -883,7 +933,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/forecast_HTTPValidationError"
                 }
               }
             }
@@ -928,7 +978,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/forecast_HTTPValidationError"
                 }
               }
             }
@@ -970,7 +1020,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/ActionRequest"
+                "$ref": "#/components/schemas/action_ActionRequest"
               }
             }
           },
@@ -982,7 +1032,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ActionResult"
+                  "$ref": "#/components/schemas/action_ActionResult"
                 }
               }
             }
@@ -992,7 +1042,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/action_HTTPValidationError"
                 }
               }
             }
@@ -1003,7 +1053,7 @@
   },
   "components": {
     "schemas": {
-      "ApiKeyCreate": {
+      "identity_ApiKeyCreate": {
         "properties": {
           "name": {
             "type": "string",
@@ -1026,7 +1076,7 @@
         ],
         "title": "ApiKeyCreate"
       },
-      "ApiKeyCreated": {
+      "identity_ApiKeyCreated": {
         "properties": {
           "id": {
             "type": "string",
@@ -1057,7 +1107,7 @@
         ],
         "title": "ApiKeyCreated"
       },
-      "AuditEntry": {
+      "identity_AuditEntry": {
         "properties": {
           "tenant_id": {
             "type": "string",
@@ -1101,7 +1151,7 @@
         ],
         "title": "AuditEntry"
       },
-      "Body_token_v1_auth_token_post": {
+      "identity_Body_token_v1_auth_token_post": {
         "properties": {
           "grant_type": {
             "type": "string",
@@ -1135,11 +1185,11 @@
         ],
         "title": "Body_token_v1_auth_token_post"
       },
-      "HTTPValidationError": {
+      "identity_HTTPValidationError": {
         "properties": {
           "detail": {
             "items": {
-              "$ref": "#/components/schemas/ValidationError"
+              "$ref": "#/components/schemas/identity_ValidationError"
             },
             "type": "array",
             "title": "Detail"
@@ -1148,7 +1198,7 @@
         "type": "object",
         "title": "HTTPValidationError"
       },
-      "TokenResponse": {
+      "identity_TokenResponse": {
         "properties": {
           "access_token": {
             "type": "string",
@@ -1176,7 +1226,7 @@
         ],
         "title": "TokenResponse"
       },
-      "ValidationError": {
+      "identity_ValidationError": {
         "properties": {
           "loc": {
             "items": {
@@ -1216,7 +1266,7 @@
         ],
         "title": "ValidationError"
       },
-      "Body_upload_v1_data_upload_post": {
+      "ingestion_Body_upload_v1_data_upload_post": {
         "properties": {
           "file": {
             "type": "string",
@@ -1230,7 +1280,20 @@
         ],
         "title": "Body_upload_v1_data_upload_post"
       },
-      "IngestJson": {
+      "ingestion_HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ingestion_ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "ingestion_IngestJson": {
         "properties": {
           "source": {
             "type": "string",
@@ -1258,7 +1321,7 @@
         ],
         "title": "IngestJson"
       },
-      "IngestionAccepted": {
+      "ingestion_IngestionAccepted": {
         "properties": {
           "ingestion_id": {
             "type": "string",
@@ -1266,22 +1329,144 @@
           },
           "status": {
             "type": "string",
-            "title": "Status"
+            "enum": [
+              "received"
+            ],
+            "title": "Status",
+            "description": "The batch has been durably accepted."
           },
           "s3_uri": {
             "type": "string",
             "title": "S3 Uri"
+          },
+          "status_url": {
+            "type": "string",
+            "title": "Status Url",
+            "description": "Relative API path to poll for processing results."
           }
         },
         "type": "object",
         "required": [
           "ingestion_id",
           "status",
-          "s3_uri"
+          "s3_uri",
+          "status_url"
         ],
         "title": "IngestionAccepted"
       },
-      "FinancialRecord": {
+      "ingestion_ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "ctx": {
+            "type": "object",
+            "title": "Context"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      },
+      "ingestion_IngestionStatusResponse": {
+        "properties": {
+          "ingestion_id": {
+            "type": "string",
+            "title": "Ingestion Id"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "received",
+              "completed",
+              "failed"
+            ],
+            "title": "Status",
+            "description": "Current asynchronous processing state."
+          },
+          "source": {
+            "type": "string",
+            "title": "Source"
+          },
+          "record_count": {
+            "type": "integer",
+            "title": "Record Count"
+          },
+          "warnings": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Warnings",
+            "description": "Non-fatal parsing and normalization warnings."
+          },
+          "error_summary": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error Summary"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "completed_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Completed At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "ingestion_id",
+          "status",
+          "source",
+          "record_count",
+          "warnings",
+          "created_at"
+        ],
+        "title": "IngestionStatusResponse"
+      },
+      "normalization_FinancialRecord": {
         "properties": {
           "id": {
             "type": "string",
@@ -1293,15 +1478,15 @@
             "title": "Tenant Id"
           },
           "type": {
-            "$ref": "#/components/schemas/RecordType",
+            "$ref": "#/components/schemas/normalization_RecordType",
             "default": "unknown"
           },
           "source": {
-            "$ref": "#/components/schemas/RecordSource",
+            "$ref": "#/components/schemas/normalization_RecordSource",
             "default": "other"
           },
           "amount": {
-            "$ref": "#/components/schemas/Money"
+            "$ref": "#/components/schemas/normalization_Money"
           },
           "direction": {
             "type": "string",
@@ -1352,7 +1537,7 @@
           "counterparty": {
             "anyOf": [
               {
-                "$ref": "#/components/schemas/Party"
+                "$ref": "#/components/schemas/normalization_Party"
               },
               {
                 "type": "null"
@@ -1362,7 +1547,7 @@
           "account": {
             "anyOf": [
               {
-                "$ref": "#/components/schemas/Party"
+                "$ref": "#/components/schemas/normalization_Party"
               },
               {
                 "type": "null"
@@ -1404,7 +1589,20 @@
         "title": "FinancialRecord",
         "description": "Canonical representation of a single financial fact."
       },
-      "Money": {
+      "normalization_HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/normalization_ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "normalization_Money": {
         "properties": {
           "minor_units": {
             "type": "integer",
@@ -1426,7 +1624,7 @@
         ],
         "title": "Money"
       },
-      "Party": {
+      "normalization_Party": {
         "properties": {
           "name": {
             "anyOf": [
@@ -1489,7 +1687,7 @@
         "type": "object",
         "title": "Party"
       },
-      "RecordSource": {
+      "normalization_RecordSource": {
         "type": "string",
         "enum": [
           "bank",
@@ -1507,7 +1705,7 @@
         ],
         "title": "RecordSource"
       },
-      "RecordType": {
+      "normalization_RecordType": {
         "type": "string",
         "enum": [
           "payment",
@@ -1524,7 +1722,7 @@
         ],
         "title": "RecordType"
       },
-      "UnderstandRequest": {
+      "normalization_UnderstandRequest": {
         "properties": {
           "transaction": {
             "additionalProperties": true,
@@ -1551,10 +1749,10 @@
         ],
         "title": "UnderstandRequest"
       },
-      "UnderstandResponse": {
+      "normalization_UnderstandResponse": {
         "properties": {
           "record": {
-            "$ref": "#/components/schemas/FinancialRecord"
+            "$ref": "#/components/schemas/normalization_FinancialRecord"
           },
           "classification": {
             "type": "string",
@@ -1580,7 +1778,47 @@
         ],
         "title": "UnderstandResponse"
       },
-      "EntityView": {
+      "normalization_ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "ctx": {
+            "type": "object",
+            "title": "Context"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      },
+      "graph_EntityView": {
         "properties": {
           "entity": {
             "additionalProperties": true,
@@ -1603,7 +1841,73 @@
         ],
         "title": "EntityView"
       },
-      "MatchOut": {
+      "graph_HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/graph_ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "graph_ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "ctx": {
+            "type": "object",
+            "title": "Context"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      },
+      "reconciliation_HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/reconciliation_ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "reconciliation_MatchOut": {
         "properties": {
           "id": {
             "type": "string",
@@ -1666,7 +1970,7 @@
         ],
         "title": "MatchOut"
       },
-      "PairRequest": {
+      "reconciliation_PairRequest": {
         "properties": {
           "payment": {
             "additionalProperties": true,
@@ -1686,7 +1990,7 @@
         ],
         "title": "PairRequest"
       },
-      "ReviewRequest": {
+      "reconciliation_ReviewRequest": {
         "properties": {
           "decision": {
             "type": "string",
@@ -1722,7 +2026,7 @@
         ],
         "title": "ReviewRequest"
       },
-      "RunRequest": {
+      "reconciliation_RunRequest": {
         "properties": {
           "scope": {
             "type": "string",
@@ -1744,7 +2048,7 @@
         "type": "object",
         "title": "RunRequest"
       },
-      "RunResult": {
+      "reconciliation_RunResult": {
         "properties": {
           "run_id": {
             "type": "string",
@@ -1768,14 +2072,14 @@
           },
           "matches": {
             "items": {
-              "$ref": "#/components/schemas/MatchOut"
+              "$ref": "#/components/schemas/reconciliation_MatchOut"
             },
             "type": "array",
             "title": "Matches"
           },
           "unmatched_items": {
             "items": {
-              "$ref": "#/components/schemas/UnmatchedOut"
+              "$ref": "#/components/schemas/reconciliation_UnmatchedOut"
             },
             "type": "array",
             "title": "Unmatched Items"
@@ -1792,7 +2096,7 @@
         ],
         "title": "RunResult"
       },
-      "UnmatchedOut": {
+      "reconciliation_UnmatchedOut": {
         "properties": {
           "record_id": {
             "type": "string",
@@ -1815,7 +2119,47 @@
         ],
         "title": "UnmatchedOut"
       },
-      "Answer": {
+      "reconciliation_ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "ctx": {
+            "type": "object",
+            "title": "Context"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      },
+      "intelligence_Answer": {
         "properties": {
           "answer": {
             "type": "string",
@@ -1845,7 +2189,7 @@
         ],
         "title": "Answer"
       },
-      "AskRequest": {
+      "intelligence_AskRequest": {
         "properties": {
           "question": {
             "type": "string",
@@ -1866,7 +2210,7 @@
         ],
         "title": "AskRequest"
       },
-      "ExplainRequest": {
+      "intelligence_ExplainRequest": {
         "properties": {
           "subject": {
             "type": "string",
@@ -1912,11 +2256,64 @@
         ],
         "title": "ExplainRequest"
       },
-      "DetectRequest": {
+      "intelligence_HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/intelligence_ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "intelligence_ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "ctx": {
+            "type": "object",
+            "title": "Context"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      },
+      "anomaly_DetectRequest": {
         "properties": {
           "transactions": {
             "items": {
-              "$ref": "#/components/schemas/Txn"
+              "$ref": "#/components/schemas/anomaly_Txn"
             },
             "type": "array",
             "minItems": 1,
@@ -1934,7 +2331,7 @@
         ],
         "title": "DetectRequest"
       },
-      "Finding": {
+      "anomaly_Finding": {
         "properties": {
           "record_id": {
             "type": "string",
@@ -1967,7 +2364,20 @@
         ],
         "title": "Finding"
       },
-      "Txn": {
+      "anomaly_HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/anomaly_ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "anomaly_Txn": {
         "properties": {
           "id": {
             "type": "string",
@@ -2012,7 +2422,47 @@
         ],
         "title": "Txn"
       },
-      "ForecastPoint": {
+      "anomaly_ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "ctx": {
+            "type": "object",
+            "title": "Context"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      },
+      "forecast_ForecastPoint": {
         "properties": {
           "date": {
             "type": "string",
@@ -2031,7 +2481,7 @@
         ],
         "title": "ForecastPoint"
       },
-      "ForecastRequest": {
+      "forecast_ForecastRequest": {
         "properties": {
           "opening_balance_minor": {
             "type": "integer",
@@ -2066,7 +2516,7 @@
         ],
         "title": "ForecastRequest"
       },
-      "ForecastResponse": {
+      "forecast_ForecastResponse": {
         "properties": {
           "currency": {
             "type": "string",
@@ -2074,7 +2524,7 @@
           },
           "points": {
             "items": {
-              "$ref": "#/components/schemas/ForecastPoint"
+              "$ref": "#/components/schemas/forecast_ForecastPoint"
             },
             "type": "array",
             "title": "Points"
@@ -2097,7 +2547,60 @@
         ],
         "title": "ForecastResponse"
       },
-      "ActionRequest": {
+      "forecast_HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/forecast_ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "forecast_ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "ctx": {
+            "type": "object",
+            "title": "Context"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      },
+      "action_ActionRequest": {
         "properties": {
           "action": {
             "type": "string",
@@ -2123,7 +2626,7 @@
         ],
         "title": "ActionRequest"
       },
-      "ActionResult": {
+      "action_ActionResult": {
         "properties": {
           "action_id": {
             "type": "string",
@@ -2155,7 +2658,115 @@
           "detail"
         ],
         "title": "ActionResult"
+      },
+      "action_HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/action_ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "action_ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "ctx": {
+            "type": "object",
+            "title": "Context"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      }
+    },
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      },
+      "apiKeyAuth": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "X-API-Key"
       }
     }
-  }
+  },
+  "security": [
+    {
+      "bearerAuth": []
+    },
+    {
+      "apiKeyAuth": []
+    }
+  ],
+  "tags": [
+    {
+      "name": "auth"
+    },
+    {
+      "name": "api-keys"
+    },
+    {
+      "name": "audit"
+    },
+    {
+      "name": "ingestion"
+    },
+    {
+      "name": "normalization"
+    },
+    {
+      "name": "graph"
+    },
+    {
+      "name": "reconciliation"
+    },
+    {
+      "name": "intelligence"
+    },
+    {
+      "name": "anomalies"
+    },
+    {
+      "name": "forecast"
+    },
+    {
+      "name": "actions"
+    }
+  ]
 }
