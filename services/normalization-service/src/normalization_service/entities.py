@@ -83,6 +83,10 @@ class EntityResolver:
                 display_name=raw_name.strip(),
                 kind=kind,
                 aliases=[raw_name.strip()],
+                # Set explicitly (not left to the column default): the column default
+                # only applies at flush time, but a batch may resolve the same new
+                # entity again — via self._cache — before this row is ever flushed.
+                seen_count=1,
             )
             self._session.add(ent)
         else:
