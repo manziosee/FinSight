@@ -42,6 +42,6 @@ jobs:
           - action-service
           - api-gateway
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: superfly/flyctl-actions/setup-flyctl@master
       - run: flyctl deploy --config deploy/fly/${{ matrix.service }}.toml --remote-only --wait-timeout 600

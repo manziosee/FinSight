@@ -56,7 +56,7 @@ jobs:
     runs-on: ubuntu-latest
     environment: production   # requires manual approval (configured on the GitHub Environment)
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ vars.PRODUCTION_DEPLOY_ROLE_ARN }}
