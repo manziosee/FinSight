@@ -3,15 +3,17 @@ from __future__ import annotations
 import asyncio
 import datetime as dt
 import uuid
+from typing import Literal
 
 from fastapi import Depends, UploadFile
 from pydantic import BaseModel, Field
+from sqlalchemy import select
 
 from finsight_common.app import create_app
 from finsight_common.auth import Principal, require_scopes
 from finsight_common.db import Database
-from finsight_common.errors import FinSightError
-from finsight_common.events import DataIngested, EventEnvelope
+from finsight_common.errors import FinSightError, NotFoundError
+from finsight_common.events import DataIngested, EventEnvelope, TransactionNormalized, topic_for
 from finsight_common.messaging import (
     KafkaConnection,
     KafkaEventBus,
@@ -33,6 +35,7 @@ bus = KafkaEventBus(
     group_id="ingestion-service",
 )
 _relay_task: asyncio.Task | None = None
+_consumer_task: asyncio.Task | None = None
 
 
 async def _startup() -> None:
@@ -40,14 +43,18 @@ async def _startup() -> None:
         await db.create_all()
     await store.ensure_bucket()
     await bus.start()
-    global _relay_task
+    bus.subscribe(topic_for(TransactionNormalized), _on_normalized)
+    global _relay_task, _consumer_task
     relay = OutboxRelay(SqlOutboxStore(db.sessionmaker), bus.producer)
     _relay_task = asyncio.create_task(relay.run())
+    _consumer_task = asyncio.create_task(bus.run_consumers())
 
 
 async def _shutdown() -> None:
     if _relay_task:
         _relay_task.cancel()
+    if _consumer_task:
+        _consumer_task.cancel()
     await bus.stop()
     await db.dispose()
 
@@ -70,8 +77,22 @@ class IngestJson(BaseModel):
 
 class IngestionAccepted(BaseModel):
     ingestion_id: str
-    status: str
+    status: Literal["received"] = Field(description="The batch has been durably accepted.")
     s3_uri: str
+    status_url: str = Field(description="Relative API path to poll for processing results.")
+
+
+class IngestionStatusResponse(BaseModel):
+    ingestion_id: str
+    status: Literal["received", "completed", "failed"] = Field(
+        description="Current asynchronous processing state."
+    )
+    source: str
+    record_count: int
+    warnings: list[str] = Field(description="Non-fatal parsing and normalization warnings.")
+    error_summary: str | None = None
+    created_at: dt.datetime
+    completed_at: dt.datetime | None = None
 
 
 async def _persist(
@@ -111,7 +132,32 @@ async def _persist(
                 ),
             ),
         )
-    return IngestionAccepted(ingestion_id=ingestion_id, status="received", s3_uri=uri)
+    return IngestionAccepted(
+        ingestion_id=ingestion_id,
+        status="received",
+        s3_uri=uri,
+        status_url=f"/v1/data/ingestions/{ingestion_id}",
+    )
+
+
+async def _on_normalized(body: dict) -> None:
+    env = EventEnvelope[TransactionNormalized].model_validate(body)
+    async with db.session() as session:
+        stmt = select(Ingestion).where(
+            Ingestion.id == env.data.ingestion_id,
+            Ingestion.tenant_id == env.tenant_id,
+        )
+        ingestion = (await session.execute(stmt)).scalar_one_or_none()
+        if ingestion is None:
+            raise NotFoundError(f"ingestion {env.data.ingestion_id} not found")
+
+        ingestion.record_count = len(env.data.records)
+        ingestion.warnings = env.data.warnings
+        ingestion.completed_at = env.occurred_at
+        ingestion.status = "completed" if env.data.source_recognised else "failed"
+        ingestion.error_summary = (
+            "; ".join(env.data.warnings)[:1000] if not env.data.source_recognised else None
+        )
 
 
 @app.post("/v1/data/ingest", response_model=IngestionAccepted, status_code=202, tags=["ingestion"])
@@ -138,4 +184,35 @@ async def upload(
         raise FinSightError(f"unsupported content type: {content_type}")
     return await _persist(
         principal, source=source, content_type=content_type, body=await file.read()
+    )
+
+
+@app.get(
+    "/v1/data/ingestions/{ingestion_id}",
+    response_model=IngestionStatusResponse,
+    tags=["ingestion"],
+)
+async def get_ingestion(
+    ingestion_id: str,
+    principal: Principal = Depends(require_scopes("data:write")),
+) -> IngestionStatusResponse:
+    """Get the status and normalization result for an ingestion owned by this tenant."""
+    async with db.session() as session:
+        stmt = select(Ingestion).where(
+            Ingestion.id == ingestion_id,
+            Ingestion.tenant_id == principal.tenant_id,
+        )
+        ingestion = (await session.execute(stmt)).scalar_one_or_none()
+        if ingestion is None:
+            raise NotFoundError(f"ingestion {ingestion_id} not found")
+
+    return IngestionStatusResponse(
+        ingestion_id=ingestion.id,
+        status=ingestion.status,
+        source=ingestion.source,
+        record_count=ingestion.record_count,
+        warnings=ingestion.warnings or [],
+        error_summary=ingestion.error_summary,
+        created_at=ingestion.created_at,
+        completed_at=ingestion.completed_at,
     )
