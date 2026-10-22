@@ -42,7 +42,7 @@ jobs:
       - run: uv lock --check
       - run: uv sync --all-packages --frozen --python ${{ env.PYTHON_VERSION }}
       - run: uv run pytest -m "not integration" --cov --cov-report=xml --junitxml=junit.xml
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: test-results
