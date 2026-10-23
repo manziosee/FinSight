@@ -1,18 +1,27 @@
 name: finsight
 
+# Host-published ports bind to FINSIGHT_BIND_ADDR (default 127.0.0.1) so the dev stack and
+# its admin UIs aren't reachable from the LAN (Docker port publishing bypasses host
+# firewalls). Set FINSIGHT_BIND_ADDR=0.0.0.0 in .env to deliberately expose them.
+#
+# Secrets are interpolated from .env by Compose itself, and each container receives only
+# the variables listed for it — there is no blanket env_file, so a compromised service
+# can't read every other service's credentials. Run `make bootstrap` to generate them.
+
 x-service-base: &service-base
   build:
     context: .
     dockerfile: Dockerfile
-  env_file: [.env]
   restart: unless-stopped
   networks: [finsight]
 
 x-python-env: &python-env
   FINSIGHT_ENV: local
+  FINSIGHT_LOG_LEVEL: ${FINSIGHT_LOG_LEVEL:-INFO}
+  FINSIGHT_DEFAULT_CURRENCY: ${FINSIGHT_DEFAULT_CURRENCY:-XXX}
+  FINSIGHT_DEFAULT_TIMEZONE: ${FINSIGHT_DEFAULT_TIMEZONE:-UTC}
   FINSIGHT_OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
   FINSIGHT_KAFKA_BOOTSTRAP_SERVERS: redpanda:9092
-  FINSIGHT_REDIS_URL: redis://redis:6379/0
   FINSIGHT_JWKS_URL: http://identity-service:8000/.well-known/jwks.json
   FINSIGHT_JWT_ISSUER: https://identity.finsight.local
   FINSIGHT_JWT_AUDIENCE: finsight-api
@@ -52,8 +61,22 @@ services:
 
   redis:
     image: redis:7-alpine
-    command: ["redis-server", "--save", "", "--appendonly", "no"]
+    command:
+      - redis-server
+      - --save
+      - ""
+      - --appendonly
+      - "no"
+      - --requirepass
+      - ${REDIS_PASSWORD:?REDIS_PASSWORD is unset - run make bootstrap}
+    environment:
+      REDISCLI_AUTH: ${REDIS_PASSWORD}
     expose: ["6379"]
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli ping | grep -q PONG"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
     networks: [finsight]
 
   redpanda:
@@ -77,8 +100,9 @@ services:
     image: redpandadata/console:v2.7.2
     environment:
       KAFKA_BROKERS: redpanda:9092
-    ports: ["18082:8080"]
-    depends_on: [redpanda]
+    ports: ["${FINSIGHT_BIND_ADDR:-127.0.0.1}:18082:8080"]
+    depends_on:
+      redpanda: {condition: service_healthy}
     networks: [finsight]
 
   minio:
@@ -87,7 +111,7 @@ services:
     environment:
       MINIO_ROOT_USER: finsight
       MINIO_ROOT_PASSWORD: finsight_local_pw
-    ports: ["19001:9001"]
+    ports: ["${FINSIGHT_BIND_ADDR:-127.0.0.1}:19001:9001"]
     expose: ["9000"]
     volumes: [miniodata:/data]
     healthcheck:
@@ -116,14 +140,15 @@ services:
     volumes:
       - ./infra/observability/otel-collector.yaml:/etc/otelcol/config.yaml:ro
     expose: ["4317", "4318"]
-    depends_on: [jaeger]
+    depends_on:
+      jaeger: {condition: service_started}
     networks: [finsight]
 
   jaeger:
     image: jaegertracing/all-in-one:1.60
     environment:
       COLLECTOR_OTLP_ENABLED: "true"
-    ports: ["16686:16686"]
+    ports: ["${FINSIGHT_BIND_ADDR:-127.0.0.1}:16686:16686"]
     networks: [finsight]
 
   prometheus:
@@ -137,13 +162,15 @@ services:
     image: grafana/grafana:11.2.0
     environment:
       GF_SECURITY_ADMIN_USER: admin
-      GF_SECURITY_ADMIN_PASSWORD: admin
-      GF_AUTH_ANONYMOUS_ENABLED: "true"
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:?GRAFANA_ADMIN_PASSWORD is unset - run make bootstrap}
+      GF_AUTH_ANONYMOUS_ENABLED: "false"
+      GF_USERS_ALLOW_SIGN_UP: "false"
     volumes:
       - ./infra/observability/grafana/provisioning:/etc/grafana/provisioning:ro
       - ./infra/observability/grafana/dashboards:/var/lib/grafana/dashboards:ro
-    ports: ["13000:3000"]
-    depends_on: [prometheus]
+    ports: ["${FINSIGHT_BIND_ADDR:-127.0.0.1}:13000:3000"]
+    depends_on:
+      prometheus: {condition: service_started}
     networks: [finsight]
 
   # ---------------- edge ----------------
@@ -152,12 +179,12 @@ services:
     command:
       - --providers.file.directory=/etc/traefik/dynamic
       - --entrypoints.web.address=:80
-      - --api.dashboard=true
-      - --api.insecure=true
-    ports: ["8088:80", "8090:8080"]
+      # No --api.insecure: it serves Traefik's unauthenticated API/dashboard on its own port.
+    ports: ["${FINSIGHT_BIND_ADDR:-127.0.0.1}:8088:80"]
     volumes:
       - ./gateway/traefik/dynamic:/etc/traefik/dynamic:ro
-    depends_on: [api-gateway]
+    depends_on:
+      api-gateway: {condition: service_healthy}
     networks: [finsight]
 
   swagger-ui:
@@ -166,7 +193,7 @@ services:
       URLS: '[{"url":"/openapi/finsight.openapi.json","name":"FinSight API (aggregated)"}]'
     volumes:
       - ./docs/api:/usr/share/nginx/html/openapi:ro
-    ports: ["18081:8080"]
+    ports: ["${FINSIGHT_BIND_ADDR:-127.0.0.1}:18081:8080"]
     networks: [finsight]
 
   # ---------------- FinSight services ----------------
@@ -176,8 +203,11 @@ services:
     environment:
       <<: *python-env
       FINSIGHT_IDENTITY_DB_DSN: postgresql+asyncpg://finsight:finsight_local_pw@postgres:5432/identity
+      FINSIGHT_SEED_CLIENT_ID: ${FINSIGHT_SEED_CLIENT_ID:-}
+      FINSIGHT_SEED_CLIENT_SECRET: ${FINSIGHT_SEED_CLIENT_SECRET:-}
     depends_on:
       postgres: {condition: service_healthy}
+      redpanda: {condition: service_healthy}
     expose: ["8000"]
 
   ingestion-service:
@@ -207,6 +237,7 @@ services:
       FINSIGHT_S3_SECRET_ACCESS_KEY: finsight_local_pw
       FINSIGHT_S3_RAW_BUCKET: finsight-raw-data
     depends_on:
+      postgres: {condition: service_healthy}
       redpanda: {condition: service_healthy}
       minio-setup: {condition: service_completed_successfully}
     expose: ["8000"]
@@ -271,13 +302,19 @@ services:
       FINSIGHT_TRUSTED_HOSTS: '["*"]'
       # The console (http://localhost:3300) calls the gateway cross-origin via Traefik.
       FINSIGHT_CORS_ALLOW_ORIGINS: '["http://localhost:3300"]'
+      FINSIGHT_REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379/0
     depends_on:
-      - identity-service
-      - ingestion-service
-      - normalization-service
-      - graph-service
-      - reconciliation-service
-    ports: ["18000:8000"]
+      redis: {condition: service_healthy}
+      identity-service: {condition: service_healthy}
+      ingestion-service: {condition: service_healthy}
+      normalization-service: {condition: service_healthy}
+      graph-service: {condition: service_healthy}
+      reconciliation-service: {condition: service_healthy}
+      intelligence-service: {condition: service_healthy}
+      anomaly-service: {condition: service_healthy}
+      forecast-service: {condition: service_healthy}
+      action-service: {condition: service_healthy}
+    ports: ["${FINSIGHT_BIND_ADDR:-127.0.0.1}:18000:8000"]
 
   console:
     build:
@@ -285,8 +322,9 @@ services:
       dockerfile: Dockerfile
       args: {NEXT_PUBLIC_FINSIGHT_API_URL: "http://localhost:8088"}
     restart: unless-stopped
-    depends_on: [api-gateway]
-    ports: ["3300:3000"]
+    depends_on:
+      api-gateway: {condition: service_healthy}
+    ports: ["${FINSIGHT_BIND_ADDR:-127.0.0.1}:3300:3000"]
     networks: [finsight]
 
 networks:

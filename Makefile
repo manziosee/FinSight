@@ -20,7 +20,7 @@ up: ## Start the full local stack
 	$(COMPOSE) up -d --build
 	@echo "Gateway:      http://localhost:8088/docs"
 	@echo "Swagger UI:    http://localhost:18081"
-	@echo "Grafana:       http://localhost:13000 (admin/admin)"
+	@echo "Grafana:       http://localhost:13000 (admin / GRAFANA_ADMIN_PASSWORD in .env)"
 	@echo "Jaeger:        http://localhost:16686"
 	@echo "Redpanda UI:   http://localhost:18082"
 	@echo "MinIO console: http://localhost:19001"

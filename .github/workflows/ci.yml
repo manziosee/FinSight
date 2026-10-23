@@ -120,9 +120,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Bootstrap env
-        run: |
-          cp .env.example .env
-          python -c "from cryptography.fernet import Fernet;import pathlib,re;p=pathlib.Path('.env');p.write_text(re.sub(r'^FINSIGHT_FIELD_ENCRYPTION_KEY=.*', 'FINSIGHT_FIELD_ENCRYPTION_KEY='+Fernet.generate_key().decode(), p.read_text(), flags=re.M))"
+        run: ./scripts/bootstrap.sh
       - name: Start stack
         run: docker compose up -d --build --wait --wait-timeout 420
       - name: Run smoke test
