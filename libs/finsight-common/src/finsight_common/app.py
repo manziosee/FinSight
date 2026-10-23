@@ -35,6 +35,20 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         return response
 
 
+# Probes and scrapers address pods/machines by IP, not by the public hostname.
+_HOST_CHECK_EXEMPT_PATHS = frozenset({"/health", "/ready", "/metrics"})
+
+
+class OpsExemptTrustedHostMiddleware(TrustedHostMiddleware):
+    """Host-header allowlist that lets liveness/readiness/metrics through unchecked."""
+
+    async def __call__(self, scope: Any, receive: Any, send: Any) -> None:
+        if scope["type"] == "http" and scope["path"] in _HOST_CHECK_EXEMPT_PATHS:
+            await self.app(scope, receive, send)
+            return
+        await super().__call__(scope, receive, send)
+
+
 def create_app(
     *,
     settings: ServiceSettings,
@@ -78,14 +92,18 @@ def create_app(
         app.add_middleware(
             AuditMiddleware, service=settings.service_name, publisher=audit_publisher
         )
-    app.add_middleware(TrustedHostMiddleware, allowed_hosts=settings.trusted_hosts)
-    app.add_middleware(
-        CORSMiddleware,
-        allow_origins=settings.cors_allow_origins,
-        allow_credentials=True,
-        allow_methods=["*"],
-        allow_headers=["*"],
-    )
+    app.add_middleware(OpsExemptTrustedHostMiddleware, allowed_hosts=settings.trusted_hosts)
+    if settings.cors_allow_origins:
+        # Credentials travel in the Authorization / X-API-Key headers, never cookies, so
+        # credentialed CORS is unnecessary — and with it off, "*" can't reflect any origin.
+        app.add_middleware(
+            CORSMiddleware,
+            allow_origins=settings.cors_allow_origins,
+            allow_credentials=False,
+            allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE"],
+            allow_headers=["Authorization", "Content-Type", "X-API-Key", "X-Request-ID"],
+            expose_headers=["X-RateLimit-Remaining"],
+        )
 
     install_exception_handlers(app)
     configure_telemetry(app, settings.service_name, settings.otel_exporter_otlp_endpoint)

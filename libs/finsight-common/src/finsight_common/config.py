@@ -5,7 +5,7 @@ from __future__ import annotations
 from functools import lru_cache
 from typing import Literal
 
-from pydantic import Field, field_validator
+from pydantic import Field, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 Environment = Literal["local", "test", "staging", "production"]
@@ -68,8 +68,16 @@ class ServiceSettings(BaseSettings):
 
     # Security
     field_encryption_key: str | None = None
-    cors_allow_origins: list[str] = Field(default_factory=lambda: ["*"])
+    # Browser origins allowed to call this service. Empty = no CORS (server-to-server only);
+    # only the public edge (api-gateway) should need to set this.
+    cors_allow_origins: list[str] = Field(default_factory=list)
     trusted_hosts: list[str] = Field(default_factory=lambda: ["*"])
+
+    @model_validator(mode="after")
+    def _no_wildcard_cors_in_production(self) -> ServiceSettings:
+        if self.is_production and "*" in self.cors_allow_origins:
+            raise ValueError("cors_allow_origins must list explicit origins in staging/production")
+        return self
 
     @property
     def is_production(self) -> bool:

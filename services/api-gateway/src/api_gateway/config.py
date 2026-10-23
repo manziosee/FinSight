@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from functools import lru_cache
 
+from pydantic import Field, model_validator
+
 from finsight_common.config import ServiceSettings
 
 
@@ -21,6 +23,20 @@ class Settings(ServiceSettings):
 
     request_timeout_seconds: float = 30.0
     rate_limit_per_minute: int = 600
+    # Per-client-IP budget for POST /v1/auth/token — slows client-secret brute forcing.
+    token_rate_limit_per_minute: int = 20
+    # Number of reverse proxies in front of the gateway that append to X-Forwarded-For
+    # (Traefik locally / in k8s, the Fly proxy on Fly). The client IP is the entry that
+    # many hops from the right; anything further left is client-supplied and spoofable.
+    # 0 = trust no forwarding header and use the socket peer address.
+    trusted_proxy_hops: int = Field(default=1, ge=0)
+
+    @model_validator(mode="after")
+    def _explicit_hosts_in_production(self) -> Settings:
+        # The gateway is the public edge: pin the Host header to the real API hostname(s).
+        if self.is_production and (not self.trusted_hosts or "*" in self.trusted_hosts):
+            raise ValueError("api-gateway trusted_hosts must list explicit hostnames in prod")
+        return self
 
     @property
     def routes(self) -> list[tuple[str, str, str]]:

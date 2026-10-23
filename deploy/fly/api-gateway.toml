@@ -13,7 +13,11 @@ primary_region = "jnb"
   FINSIGHT_ENV = "production"
   FINSIGHT_LOG_LEVEL = "INFO"
   FINSIGHT_SERVICE = "api-gateway"
-  FINSIGHT_TRUSTED_HOSTS = '["*"]'
+  # Production refuses a wildcard; add a custom domain here when one is attached.
+  FINSIGHT_TRUSTED_HOSTS = '["finsight-api-gateway.fly.dev"]'
+  FINSIGHT_CORS_ALLOW_ORIGINS = '["https://finsight-console.fly.dev"]'
+  # The Fly proxy appends the real client IP to X-Forwarded-For.
+  FINSIGHT_TRUSTED_PROXY_HOPS = "1"
   # Upstreams over Fly's private 6PN network (<app>.internal):
   FINSIGHT_IDENTITY_URL = "http://finsight-identity-service.internal:8000"
   FINSIGHT_INGESTION_URL = "http://finsight-ingestion-service.internal:8000"

@@ -22,7 +22,8 @@ class RateLimiter:
             self._client = redis.from_url(self._redis_url, socket_timeout=0.25)
         return self._client
 
-    async def check(self, key: str) -> tuple[bool, int]:
+    async def check(self, key: str, *, limit: int | None = None) -> tuple[bool, int]:
+        limit = self._limit if limit is None else limit
         window = int(time.time() // 60)
         redis_key = f"rl:{key}:{window}"
         try:
@@ -30,7 +31,7 @@ class RateLimiter:
             count = await client.incr(redis_key)
             if count == 1:
                 await client.expire(redis_key, 70)
-            return count <= self._limit, max(0, self._limit - count)
+            return count <= limit, max(0, limit - count)
         except Exception as exc:
             _log.warning("ratelimit.unavailable", error=str(exc))
-            return True, self._limit
+            return True, limit

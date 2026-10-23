@@ -136,8 +136,12 @@ class TokenResponse(BaseModel):
 
 
 class ApiKeyCreate(BaseModel):
-    name: str = Field(examples=["ci-pipeline"])
-    scopes: list[str] = Field(default_factory=list)
+    name: str = Field(min_length=1, max_length=255, examples=["ci-pipeline"])
+    scopes: list[str] = Field(
+        default_factory=list,
+        max_length=64,
+        description="Must be a subset of the scopes held by the calling token.",
+    )
 
 
 class ApiKeyCreated(BaseModel):
@@ -183,7 +187,8 @@ async def create_api_key(
             tenant_id=principal.tenant_id,
             client_id=principal.subject,
             name=body.name,
-            scopes=" ".join(body.scopes),
+            requested_scopes=body.scopes,
+            caller_scopes=principal.scopes,
         )
     return ApiKeyCreated(**result)
 

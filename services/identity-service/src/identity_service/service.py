@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import datetime as dt
+from collections.abc import Iterable
 
 import jwt
 from argon2 import PasswordHasher
@@ -10,7 +11,7 @@ from argon2.exceptions import VerifyMismatchError
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from finsight_common.errors import AuthenticationError, NotFoundError
+from finsight_common.errors import AuthenticationError, AuthorizationError, NotFoundError
 from finsight_common.security import generate_api_key, hash_api_key
 from identity_service.config import Settings
 from identity_service.keys import SigningKey
@@ -71,8 +72,23 @@ class IdentityService:
     # --- API keys --------------------------------------------------------
 
     async def create_api_key(
-        self, session: AsyncSession, *, tenant_id: str, client_id: str, name: str, scopes: str
+        self,
+        session: AsyncSession,
+        *,
+        tenant_id: str,
+        client_id: str,
+        name: str,
+        requested_scopes: Iterable[str],
+        caller_scopes: set[str],
     ) -> dict:
+        # A key can never carry more authority than the caller minting it.
+        requested = {s.strip() for s in requested_scopes if s.strip()}
+        excess = requested - caller_scopes
+        if excess:
+            raise AuthorizationError(
+                f"cannot grant scope(s) the caller does not hold: {', '.join(sorted(excess))}"
+            )
+        scopes = " ".join(sorted(requested))
         raw, hashed = generate_api_key()
         record = ApiKey(
             tenant_id=tenant_id,
@@ -104,7 +120,13 @@ class IdentityService:
         s = self._settings
         if not (s.seed_client_id and s.seed_client_secret):
             return
-        if await session.get(OAuthClient, s.seed_client_id):
+        existing = await session.get(OAuthClient, s.seed_client_id)
+        if existing:
+            # Changing the configured secret rotates it (e.g. away from a demo default).
+            try:
+                _ph.verify(existing.secret_hash, s.seed_client_secret)
+            except VerifyMismatchError:
+                existing.secret_hash = _ph.hash(s.seed_client_secret)
             return
         if not await session.get(Tenant, s.seed_tenant_id):
             session.add(Tenant(id=s.seed_tenant_id, name="Demo Tenant"))

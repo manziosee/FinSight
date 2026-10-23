@@ -269,6 +269,8 @@ services:
     environment:
       <<: *python-env
       FINSIGHT_TRUSTED_HOSTS: '["*"]'
+      # The console (http://localhost:3300) calls the gateway cross-origin via Traefik.
+      FINSIGHT_CORS_ALLOW_ORIGINS: '["http://localhost:3300"]'
     depends_on:
       - identity-service
       - ingestion-service

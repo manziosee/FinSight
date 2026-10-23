@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import time
 
 import httpx
@@ -21,19 +22,17 @@ _client: httpx.AsyncClient | None = None
 _limiter = RateLimiter(settings.redis_url, settings.rate_limit_per_minute)
 _aggregated_spec: dict | None = None
 _spec_fetched_at: float = 0.0
+_spec_lock = asyncio.Lock()
 _SPEC_TTL = 30.0
+# While upstreams are still booting the spec is "thin"; retry, but never more often than
+# this — /openapi.json is public and must not become a fan-out amplifier.
+_SPEC_MIN_REFRESH = 5.0
 
-# Paths that do not require authentication at the edge.
-_PUBLIC_PREFIXES = (
-    "/v1/auth/token",
-    "/.well-known/jwks.json",
-    "/health",
-    "/ready",
-    "/docs",
-    "/redoc",
-    "/openapi.json",
-    "/metrics",
-)
+# Proxied paths that do not require authentication. Exact matches only: a prefix check
+# would also expose e.g. /v1/auth/token-admin. (Ops/docs routes are served by the gateway
+# itself, never by the proxy, so they don't belong here.)
+_PUBLIC_PATHS = frozenset({"/v1/auth/token", "/.well-known/jwks.json"})
+_TOKEN_PATH = "/v1/auth/token"  # noqa: S105 - a URL path, not a credential
 
 
 async def _startup() -> None:
@@ -41,15 +40,22 @@ async def _startup() -> None:
     _client = httpx.AsyncClient(timeout=settings.request_timeout_seconds)
 
 
-async def _get_spec(force: bool = False) -> dict:
+def _spec_needs_refresh() -> bool:
+    age = time.monotonic() - _spec_fetched_at
+    thin = not _aggregated_spec or len(_aggregated_spec.get("paths", {})) < 5
+    return age > _SPEC_TTL or (thin and age > _SPEC_MIN_REFRESH)
+
+
+async def _get_spec() -> dict:
     """Aggregate downstream specs lazily; refresh on a short TTL (services boot async)."""
     global _aggregated_spec, _spec_fetched_at
     assert _client is not None
-    stale = (time.monotonic() - _spec_fetched_at) > _SPEC_TTL
-    thin = not _aggregated_spec or len(_aggregated_spec.get("paths", {})) < 5
-    if force or stale or thin:
-        _aggregated_spec = await build_aggregated_spec(_client, settings)
-        _spec_fetched_at = time.monotonic()
+    if _aggregated_spec is None or _spec_needs_refresh():
+        async with _spec_lock:  # concurrent callers share one rebuild
+            if _aggregated_spec is None or _spec_needs_refresh():
+                _aggregated_spec = await build_aggregated_spec(_client, settings)
+                _spec_fetched_at = time.monotonic()
+    assert _aggregated_spec is not None
     return _aggregated_spec
 
 
@@ -77,20 +83,30 @@ app.router.routes = [r for r in app.router.routes if getattr(r, "path", None) !=
 
 def _upstream_for(path: str) -> tuple[str, str] | None:
     for prefix, url, tag in sorted(settings.routes, key=lambda r: -len(r[0])):
-        if path == prefix or path.startswith(prefix + "/") or path.startswith(prefix):
+        if path == prefix or path.startswith(prefix + "/"):
             return url, tag
     return None
+
+
+def _client_ip(request: Request) -> str:
+    """Caller IP for rate limiting, read from X-Forwarded-For as written by our own proxies.
+
+    Each trusted proxy appends the address it received the connection from, so the
+    client is ``trusted_proxy_hops`` entries from the right. The socket peer is the
+    proxy itself and would put every anonymous caller in one shared bucket.
+    """
+    hops = settings.trusted_proxy_hops
+    forwarded = request.headers.get("x-forwarded-for")
+    if hops and forwarded:
+        chain = [ip.strip() for ip in forwarded.split(",") if ip.strip()]
+        if chain:
+            return chain[-hops] if len(chain) >= hops else chain[0]
+    return request.client.host if request.client else "unknown"
 
 
 @app.get("/openapi.json", include_in_schema=False)
 async def aggregated_openapi() -> JSONResponse:
     return JSONResponse(await _get_spec())
-
-
-@app.post("/internal/openapi/refresh", include_in_schema=False)
-async def refresh_openapi() -> JSONResponse:
-    spec = await _get_spec(force=True)
-    return JSONResponse({"paths": len(spec.get("paths", {}))})
 
 
 @app.api_route(
@@ -107,8 +123,19 @@ async def proxy(request: Request, full_path: str = "") -> Response:
         return JSONResponse({"title": "Not Found", "status": 404}, status_code=404)
     upstream_url, _tag = target
 
-    is_public = any(path.startswith(p) for p in _PUBLIC_PREFIXES)
-    principal_key = request.client.host if request.client else "anon"
+    is_public = path in _PUBLIC_PATHS
+    principal_key = f"ip:{_client_ip(request)}"
+    if path == _TOKEN_PATH:
+        allowed, _ = await _limiter.check(
+            f"token:{principal_key}", limit=settings.token_rate_limit_per_minute
+        )
+        if not allowed:
+            return JSONResponse(
+                {"title": "Too Many Requests", "status": 429},
+                status_code=429,
+                headers={"Retry-After": "60"},
+                media_type="application/problem+json",
+            )
     if not is_public:
         try:
             principal = await get_principal(request, settings)
