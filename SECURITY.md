@@ -2,8 +2,9 @@
 
 ## Reporting a vulnerability
 
-Email **security@finsight.dev** (or info@sicrwanda.com) with details and a PoC if possible.
-Do not open a public issue. We aim to acknowledge within 3 business days and to ship a fix or
+Report it privately through GitHub: **Security → Report a vulnerability** on
+https://github.com/manziosee/FinSight/security/advisories/new, with details and a PoC if
+possible. Do not open a public issue. We aim to acknowledge within 3 business days and to ship a fix or
 mitigation within 30 days for high-severity issues. We'll credit reporters who want it.
 
 ## Posture
