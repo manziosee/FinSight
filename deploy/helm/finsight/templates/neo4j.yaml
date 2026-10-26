@@ -1,0 +1,85 @@
+{{- if .Values.neo4j.enabled }}
+{{- $g := .Values.global -}}
+{{- $n := .Values.neo4j -}}
+# Neo4j Community, single instance. NEO4J_AUTH comes from finsight/<env>/neo4j; only pods in
+# this namespace can reach it (see networkpolicy.yaml). Back up the PVC (EBS snapshots).
+apiVersion: {{ $g.externalSecretsApiVersion }}
+kind: ExternalSecret
+metadata:
+  name: neo4j-secrets
+spec:
+  refreshInterval: 1h
+  secretStoreRef: {name: {{ $g.secretStore }}, kind: ClusterSecretStore}
+  target: {name: neo4j-secrets, creationPolicy: Owner}
+  dataFrom:
+    - extract: {key: finsight/{{ $g.env }}/neo4j}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: neo4j
+  labels: {app.kubernetes.io/name: neo4j}
+spec:
+  selector: {app.kubernetes.io/name: neo4j}
+  ports:
+    - {name: bolt, port: 7687, targetPort: bolt}
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: neo4j
+  labels:
+    app.kubernetes.io/name: neo4j
+    {{- include "finsight.labels" . | nindent 4 }}
+spec:
+  serviceName: neo4j
+  replicas: 1
+  selector:
+    matchLabels: {app.kubernetes.io/name: neo4j}
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: neo4j
+        app.kubernetes.io/part-of: finsight
+    spec:
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 7474
+        runAsGroup: 7474
+        fsGroup: 7474
+        seccompProfile: {type: RuntimeDefault}
+      containers:
+        - name: neo4j
+          image: {{ $n.image }}
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities: {drop: ["ALL"]}
+          envFrom:
+            - secretRef: {name: neo4j-secrets}
+          env:
+            - {name: NEO4J_server_default__listen__address, value: "0.0.0.0"}
+            - {name: NEO4J_server_http_enabled, value: "false"}
+            - {name: NEO4J_server_memory_heap_initial__size, value: {{ $n.heap | quote }}}
+            - {name: NEO4J_server_memory_heap_max__size, value: {{ $n.heap | quote }}}
+            - {name: NEO4J_server_memory_pagecache_size, value: {{ $n.pageCache | quote }}}
+          ports:
+            - {name: bolt, containerPort: 7687}
+          readinessProbe:
+            tcpSocket: {port: bolt}
+            periodSeconds: 10
+          startupProbe:
+            tcpSocket: {port: bolt}
+            periodSeconds: 10
+            failureThreshold: 30
+          resources: {{ toYaml $n.resources | nindent 12 }}
+          volumeMounts:
+            - {name: data, mountPath: /data}
+  volumeClaimTemplates:
+    - metadata: {name: data}
+      spec:
+        accessModes: [ReadWriteOnce]
+        storageClassName: {{ $n.storageClassName }}
+        resources:
+          requests: {storage: {{ $n.storage }}}
+{{- end }}

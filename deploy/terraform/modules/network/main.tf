@@ -11,6 +11,11 @@ variable "cidr" {
   default = "10.20.0.0/16"
 }
 variable "azs" { type = list(string) }
+variable "single_nat_gateway" {
+  description = "One shared NAT (cheap, but one AZ outage cuts all egress). Set false in production for one NAT per AZ."
+  type        = bool
+  default     = true
+}
 variable "tags" {
   type    = map(string)
   default = {}
@@ -28,7 +33,8 @@ module "vpc" {
   public_subnets  = [for i, _ in var.azs : cidrsubnet(var.cidr, 4, i + 8)]
 
   enable_nat_gateway                   = true
-  single_nat_gateway                   = true
+  single_nat_gateway                   = var.single_nat_gateway
+  one_nat_gateway_per_az               = !var.single_nat_gateway
   enable_dns_hostnames                 = true
   enable_flow_log                      = true
   create_flow_log_cloudwatch_iam_role  = true
@@ -41,5 +47,6 @@ module "vpc" {
 }
 
 output "vpc_id" { value = module.vpc.vpc_id }
+output "vpc_cidr" { value = module.vpc.vpc_cidr_block }
 output "private_subnet_ids" { value = module.vpc.private_subnets }
 output "public_subnet_ids" { value = module.vpc.public_subnets }

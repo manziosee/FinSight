@@ -1,16 +1,29 @@
 {{- if .Values.ingress.enabled }}
+{{- $in := .Values.ingress -}}
+{{- $alb := eq $in.className "alb" -}}
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   name: finsight-api
   annotations:
-    {{- if .Values.ingress.tls.enabled }}
-    cert-manager.io/cluster-issuer: {{ .Values.ingress.tls.clusterIssuer }}
+    {{- if $alb }}
+    # AWS Load Balancer Controller: internet-facing ALB, TLS from ACM, WAF in front.
+    alb.ingress.kubernetes.io/scheme: internet-facing
+    alb.ingress.kubernetes.io/target-type: ip
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTP": 80}, {"HTTPS": 443}]'
+    alb.ingress.kubernetes.io/ssl-redirect: "443"
+    alb.ingress.kubernetes.io/ssl-policy: ELBSecurityPolicy-TLS13-1-2-2021-06
+    alb.ingress.kubernetes.io/certificate-arn: {{ required "ingress.certificateArn is required for the ALB" $in.certificateArn | quote }}
+    alb.ingress.kubernetes.io/wafv2-acl-arn: {{ required "ingress.wafAclArn is required (terraform output helm_values)" $in.wafAclArn | quote }}
+    alb.ingress.kubernetes.io/healthcheck-path: /health
+    {{- end }}
+    {{- with $in.annotations }}
+    {{- toYaml . | nindent 4 }}
     {{- end }}
 spec:
-  ingressClassName: {{ .Values.ingress.className }}
+  ingressClassName: {{ $in.className }}
   rules:
-    - host: {{ .Values.ingress.host }}
+    - host: {{ $in.host }}
       http:
         paths:
           - path: /
@@ -19,9 +32,9 @@ spec:
               service:
                 name: api-gateway
                 port: {number: 8000}
-  {{- if .Values.ingress.tls.enabled }}
+  {{- if and (not $alb) $in.tls }}
   tls:
-    - hosts: [{{ .Values.ingress.host | quote }}]
+    - hosts: [{{ $in.host | quote }}]
       secretName: finsight-api-tls
   {{- end }}
 {{- end }}

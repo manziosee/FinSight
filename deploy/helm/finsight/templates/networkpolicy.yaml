@@ -1,3 +1,6 @@
+{{- if .Values.networkPolicy.enabled }}
+{{- $np := .Values.networkPolicy -}}
+{{- $vpc := required "networkPolicy.vpcCidr is required (terraform output helm_values)" $np.vpcCidr -}}
 # Default-deny for the namespace, then explicit allows.
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
@@ -7,32 +10,96 @@ spec:
   podSelector: {}
   policyTypes: [Ingress, Egress]
 ---
+# Pod-to-pod inside the namespace (gateway -> services, intelligence -> reconciliation,
+# graph-service -> neo4j, ...).
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
-  name: allow-dns-and-mesh
+  name: allow-intra-namespace
 spec:
   podSelector: {}
-  policyTypes: [Egress]
+  policyTypes: [Ingress, Egress]
+  ingress:
+    - from: [{podSelector: {}}]
   egress:
-    - to: [{namespaceSelector: {}}]
-      ports:
-        - {protocol: UDP, port: 53}
-        - {protocol: TCP, port: 53}
-    # intra-namespace service-to-service
     - to: [{podSelector: {}}]
 ---
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
-  name: allow-ingress-to-gateway
+  name: allow-dns
+spec:
+  podSelector: {}
+  policyTypes: [Egress]
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels: {kubernetes.io/metadata.name: kube-system}
+          podSelector:
+            matchLabels: {k8s-app: kube-dns}
+      ports:
+        - {protocol: UDP, port: 53}
+        - {protocol: TCP, port: 53}
+---
+# Managed data stores live in the VPC: RDS, MSK (SASL/SCRAM over TLS), ElastiCache.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-vpc-datastores
+spec:
+  podSelector: {}
+  policyTypes: [Egress]
+  egress:
+    - to: [{ipBlock: {cidr: {{ $vpc | quote }}}}]
+      ports:
+        {{- range $np.vpcPorts }}
+        - {protocol: TCP, port: {{ . }}}
+        {{- end }}
+{{- if $np.httpsEgress }}
+---
+# HTTPS out: S3, STS (IRSA token exchange), Secrets Manager, the LLM provider.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-https-egress
+spec:
+  podSelector: {}
+  policyTypes: [Egress]
+  egress:
+    - to: [{ipBlock: {cidr: 0.0.0.0/0}}]
+      ports: [{protocol: TCP, port: 443}]
+{{- end }}
+{{- if $np.allowGatewayFromVpc }}
+---
+# ALB (IP targets) -> gateway. The ALB's nodes have VPC addresses.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-alb-to-gateway
 spec:
   podSelector:
     matchLabels:
       app.kubernetes.io/name: api-gateway
   policyTypes: [Ingress]
   ingress:
+    - from: [{ipBlock: {cidr: {{ $vpc | quote }}}}]
+      ports: [{protocol: TCP, port: 8000}]
+{{- end }}
+{{- if $np.monitoringNamespace }}
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-prometheus-scrape
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/part-of: finsight
+  policyTypes: [Ingress]
+  ingress:
     - from:
         - namespaceSelector:
-            matchLabels: {kubernetes.io/metadata.name: traefik}
+            matchLabels: {kubernetes.io/metadata.name: {{ $np.monitoringNamespace }}}
       ports: [{protocol: TCP, port: 8000}]
+{{- end }}
+{{- end }}

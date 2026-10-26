@@ -11,10 +11,12 @@ class Settings(ServiceSettings):
     normalization_db_dsn: str = (
         "postgresql+asyncpg://finsight:finsight_local_pw@localhost:5432/normalization"
     )
-    s3_endpoint_url: str | None = "http://localhost:9000"
+    # Unset = real AWS S3 with the default credential chain (IRSA on EKS). MinIO/Tigris
+    # set the endpoint and static keys explicitly (docker-compose, Fly secrets).
+    s3_endpoint_url: str | None = None
     s3_region: str = "us-east-1"
-    s3_access_key_id: str = "finsight"
-    s3_secret_access_key: str = "finsight_local_pw"
+    s3_access_key_id: str | None = None
+    s3_secret_access_key: str | None = None
     s3_raw_bucket: str = "finsight-raw-data"
 
 

@@ -1,6 +1,22 @@
 {{- $g := .Values.global -}}
 {{- $d := .Values.defaults -}}
+{{- $tag := required "global.image.tag is required (an immutable image tag, e.g. the git sha)" $g.image.tag -}}
 {{- range $name, $svc := .Values.services }}
+{{- $sa := $svc.serviceAccount | default dict }}
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: {{ $name }}
+  labels:
+    app.kubernetes.io/name: {{ $name }}
+    {{- include "finsight.labels" $ | nindent 4 }}
+  {{- if $sa.roleArn }}
+  annotations:
+    eks.amazonaws.com/role-arn: {{ $sa.roleArn | quote }}
+  {{- end }}
+# Pods never call the Kubernetes API; IRSA injects its own projected token regardless.
+automountServiceAccountToken: false
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -10,7 +26,9 @@ metadata:
     app.kubernetes.io/name: {{ $name }}
     {{- include "finsight.labels" $ | nindent 4 }}
 spec:
+  {{- if not $d.autoscaling.enabled }}
   replicas: {{ $d.replicas }}
+  {{- end }}
   selector:
     matchLabels:
       app.kubernetes.io/name: {{ $name }}
@@ -18,18 +36,34 @@ spec:
     metadata:
       labels:
         app.kubernetes.io/name: {{ $name }}
+        app.kubernetes.io/part-of: finsight
       annotations:
         prometheus.io/scrape: "true"
         prometheus.io/path: /metrics
         prometheus.io/port: "8000"
     spec:
+      serviceAccountName: {{ $name }}
+      automountServiceAccountToken: false
       securityContext:
         runAsNonRoot: {{ $d.securityContext.runAsNonRoot }}
         runAsUser: {{ $d.securityContext.runAsUser }}
         seccompProfile: {type: RuntimeDefault}
+      {{- if $d.topologySpread }}
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: topology.kubernetes.io/zone
+          whenUnsatisfiable: ScheduleAnyway
+          labelSelector:
+            matchLabels: {app.kubernetes.io/name: {{ $name }}}
+        - maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: ScheduleAnyway
+          labelSelector:
+            matchLabels: {app.kubernetes.io/name: {{ $name }}}
+      {{- end }}
       containers:
         - name: {{ $name }}
-          image: "{{ $g.image.registry }}/finsight/{{ $name }}:{{ $g.image.tag }}"
+          image: "{{ $g.image.registry }}/finsight/{{ $name }}:{{ $tag }}"
           imagePullPolicy: {{ $g.image.pullPolicy }}
           ports: [{containerPort: 8000, name: http}]
           securityContext:
@@ -42,23 +76,31 @@ spec:
             {{- range $k, $v := $.Values.config }}
             - {name: {{ $k }}, value: {{ $v | quote }}}
             {{- end }}
+            {{- if $svc.s3 }}
+            - {name: FINSIGHT_S3_RAW_BUCKET, value: {{ required "s3.bucket is required (terraform output helm_values)" $.Values.s3.bucket | quote }}}
+            - {name: FINSIGHT_S3_REGION, value: {{ $.Values.s3.region | quote }}}
+            - {name: FINSIGHT_S3_SERVER_SIDE_ENCRYPTION, value: {{ $.Values.s3.serverSideEncryption | quote }}}
+            {{- end }}
             {{- range $k, $v := $svc.extraEnv }}
             - {name: {{ $k }}, value: {{ $v | quote }}}
             {{- end }}
-          {{- if $svc.secrets }}
+          {{- if $svc.secret }}
           envFrom:
             - secretRef: {name: {{ $name }}-secrets}
           {{- end }}
           resources: {{ toYaml $d.resources | nindent 12 }}
           volumeMounts:
             - {name: tmp, mountPath: /tmp}
+          # Slow first boot (migrations already ran; Kafka/DB connects) shouldn't trip liveness.
+          startupProbe:
+            httpGet: {path: /health, port: http}
+            periodSeconds: 5
+            failureThreshold: 30
           livenessProbe:
             httpGet: {path: /health, port: http}
-            initialDelaySeconds: 10
             periodSeconds: 15
           readinessProbe:
             httpGet: {path: /ready, port: http}
-            initialDelaySeconds: 5
             periodSeconds: 10
       volumes:
         - {name: tmp, emptyDir: {}}
@@ -102,7 +144,7 @@ spec:
     matchLabels:
       app.kubernetes.io/name: {{ $name }}
 {{- end }}
-{{- if and $d.serviceMonitor.enabled }}
+{{- if $d.serviceMonitor.enabled }}
 ---
 apiVersion: monitoring.coreos.com/v1
 kind: ServiceMonitor
@@ -115,9 +157,11 @@ spec:
   endpoints:
     - {port: http, path: /metrics, interval: 30s}
 {{- end }}
-{{- if $svc.secrets }}
+{{- if $svc.secret }}
 ---
-apiVersion: external-secrets.io/v1beta1
+# Imports every key of finsight/<env>/<service> (written by terraform's service-secrets
+# module with the exact env var names), so the two sides can't drift apart.
+apiVersion: {{ $g.externalSecretsApiVersion }}
 kind: ExternalSecret
 metadata:
   name: {{ $name }}-secrets
@@ -125,10 +169,7 @@ spec:
   refreshInterval: 1h
   secretStoreRef: {name: {{ $g.secretStore }}, kind: ClusterSecretStore}
   target: {name: {{ $name }}-secrets, creationPolicy: Owner}
-  data:
-    {{- range $svc.secrets }}
-    - secretKey: {{ . }}
-      remoteRef: {key: finsight/{{ $g.env }}/{{ $name }}, property: {{ . }}}
-    {{- end }}
+  dataFrom:
+    - extract: {key: finsight/{{ $g.env }}/{{ $name }}}
 {{- end }}
 {{- end }}

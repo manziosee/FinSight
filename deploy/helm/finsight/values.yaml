@@ -1,13 +1,18 @@
 # Default values. Override per environment with values-<env>.yaml.
+# Values marked (terraform) come from `terraform output helm_values` in deploy/terraform/envs/<env>.
 global:
   image:
     registry: 000000000000.dkr.ecr.eu-west-1.amazonaws.com
-    tag: latest
+    # Required: an immutable tag (CD passes the promoted git-sha tag). There is no
+    # "latest" fallback, so a forgotten tag fails the render instead of shipping
+    # whatever was pushed last.
+    tag: ""
     pullPolicy: IfNotPresent
   env: staging
   otlpEndpoint: http://otel-collector.observability:4317
-  # External Secrets Operator ClusterSecretStore name
+  # External Secrets Operator ClusterSecretStore (AWS Secrets Manager, IRSA-authenticated).
   secretStore: aws-secrets-manager
+  externalSecretsApiVersion: external-secrets.io/v1
 
 # Applied to every service Deployment.
 defaults:
@@ -29,47 +34,97 @@ defaults:
     readOnlyRootFilesystem: true
     allowPrivilegeEscalation: false
     capabilities: {drop: ["ALL"]}
+  # Spread replicas across zones (and nodes) so one AZ outage can't take a service down.
+  topologySpread: true
   serviceMonitor:
     enabled: true
 
-# Each key becomes a Deployment + Service. `port` is always 8000.
+# Each key becomes a ServiceAccount + Deployment + Service. `port` is always 8000.
+#   secret: true          -> envFrom the ExternalSecret finsight/<env>/<service> (all keys)
+#   s3: true              -> raw-bucket settings; AWS access via the service account's IRSA role
+#   serviceAccount.roleArn -> IRSA role (terraform)
 services:
   api-gateway:
     public: true
+    secret: true  # FINSIGHT_REDIS_URL (rediss://, ElastiCache AUTH)
     extraEnv:
       FINSIGHT_TRUSTED_HOSTS: '["api.finsight.dev"]'
+      # The ALB appends the client IP to X-Forwarded-For.
+      FINSIGHT_TRUSTED_PROXY_HOPS: "1"
   identity-service:
-    secrets: [FINSIGHT_IDENTITY_DB_DSN, FINSIGHT_JWT_PRIVATE_KEY_PEM]
+    secret: true
   ingestion-service:
-    secrets: [FINSIGHT_INGESTION_DB_DSN, FINSIGHT_S3_RAW_BUCKET]
+    secret: true
+    s3: true
+    serviceAccount: {roleArn: ""}  # (terraform)
   normalization-service:
-    secrets: [FINSIGHT_NORMALIZATION_DB_DSN, FINSIGHT_S3_RAW_BUCKET]
+    secret: true
+    s3: true
+    serviceAccount: {roleArn: ""}  # (terraform)
   graph-service:
-    secrets: [FINSIGHT_NEO4J_URI, FINSIGHT_NEO4J_PASSWORD]
+    secret: true
+    extraEnv:
+      FINSIGHT_NEO4J_URI: bolt://neo4j:7687
+      FINSIGHT_NEO4J_USER: neo4j
   reconciliation-service:
-    secrets: [FINSIGHT_RECONCILIATION_DB_DSN]
+    secret: true
   intelligence-service:
-    secrets: [ANTHROPIC_API_KEY]
-  anomaly-service: {}
-  forecast-service: {}
-  action-service: {}
+    secret: true  # ANTHROPIC_API_KEY (operator-managed secret)
+  anomaly-service:
+    secret: true
+  forecast-service:
+    secret: true
+  action-service:
+    secret: true
 
+s3:
+  bucket: ""  # (terraform)
+  region: eu-west-1
+  serverSideEncryption: aws:kms
+
+# Public entry point: an internet-facing ALB (AWS Load Balancer Controller) with WAF.
 ingress:
   enabled: true
-  className: traefik
+  className: alb
   host: api.finsight.dev
-  tls:
-    enabled: true
-    clusterIssuer: letsencrypt-prod
+  certificateArn: ""  # ACM certificate for the host
+  wafAclArn: ""       # (terraform)
+  annotations: {}
 
-# Shared infra config (endpoints only; credentials come from Secrets).
+# Default-deny with explicit allows. The services need egress to AWS endpoints inside the
+# VPC (RDS 5432, MSK 9096, ElastiCache 6379) and HTTPS out (S3/STS/Secrets Manager via
+# NAT or endpoints, LLM provider).
+networkPolicy:
+  enabled: true
+  vpcCidr: ""  # (terraform) — required when enabled
+  vpcPorts: [5432, 9096, 6379]
+  httpsEgress: true
+  # The ALB uses IP targets, so gateway traffic arrives from VPC addresses.
+  allowGatewayFromVpc: true
+  # Namespace running Prometheus (scrapes :8000/metrics on every pod).
+  monitoringNamespace: monitoring
+
+# In-cluster Neo4j Community (the financial graph); AWS has no managed Neo4j.
+neo4j:
+  enabled: true
+  image: neo4j:5.22-community@sha256:9317a2941a9641169aa2ea8470cdda184ff7a9ee1914b5429126d0db4828edd2
+  storage: 20Gi
+  storageClassName: gp3
+  heap: 1g
+  pageCache: 512m
+  resources:
+    requests: {cpu: 250m, memory: 2Gi}
+    limits: {cpu: "2", memory: 2Gi}
+
+# Shared JWT config (non-secret). Kafka/Redis/DB credentials come from the ExternalSecrets.
 config:
-  FINSIGHT_KAFKA_BOOTSTRAP_SERVERS: kafka-bootstrap.kafka:9092
-  FINSIGHT_REDIS_URL: redis://redis-master.redis:6379/0
   FINSIGHT_JWT_ISSUER: https://identity.finsight.dev
   FINSIGHT_JWT_AUDIENCE: finsight-api
   FINSIGHT_JWKS_URL: http://identity-service:8000/.well-known/jwks.json
 
 migrations:
   enabled: true
+  # Create each service's DB role + database (idempotent) before migrating.
+  dbBootstrap: true
+  bootstrapImage: postgres:16-alpine
   services: [identity-service, ingestion-service, normalization-service, reconciliation-service]

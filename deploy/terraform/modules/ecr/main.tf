@@ -36,6 +36,10 @@ resource "aws_ecr_lifecycle_policy" "svc" {
   })
 }
 
+output "repository_arns" {
+  value = [for r in aws_ecr_repository.svc : r.arn]
+}
+
 output "repository_urls" {
   value = { for k, v in aws_ecr_repository.svc : k => v.repository_url }
 }

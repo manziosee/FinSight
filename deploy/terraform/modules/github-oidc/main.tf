@@ -11,8 +11,8 @@ variable "github_repo" {
 }
 variable "environment" { type = string }
 variable "ecr_arns" {
-  type    = list(string)
-  default = ["*"]
+  description = "ECR repositories the deploy role may push to / pull from."
+  type        = list(string)
 }
 variable "tags" {
   type    = map(string)
@@ -53,7 +53,6 @@ data "aws_iam_policy_document" "deploy" {
   statement {
     sid = "EcrPushPull"
     actions = [
-      "ecr:GetAuthorizationToken",
       "ecr:BatchCheckLayerAvailability",
       "ecr:PutImage",
       "ecr:InitiateLayerUpload",
@@ -62,17 +61,17 @@ data "aws_iam_policy_document" "deploy" {
       "ecr:BatchGetImage",
       "ecr:GetDownloadUrlForLayer",
     ]
-    resources = ["*"]
+    resources = var.ecr_arns
+  }
+  statement {
+    sid       = "EcrLogin"
+    actions   = ["ecr:GetAuthorizationToken"]
+    resources = ["*"] # account-level API; cannot be scoped to a repository
   }
   statement {
     sid       = "EksDescribe"
     actions   = ["eks:DescribeCluster", "eks:ListClusters"]
     resources = ["*"]
-  }
-  statement {
-    sid       = "ReadDeploySecrets"
-    actions   = ["secretsmanager:GetSecretValue"]
-    resources = ["arn:aws:secretsmanager:*:*:secret:finsight/${var.environment}/*"]
   }
 }
 

@@ -1,9 +1,25 @@
+# Production overrides. Fill the (terraform) values from
+#   terraform -chdir=deploy/terraform/envs/production output -json helm_values
+# The chart refuses to render while any required value is empty.
 global:
   env: production
   image:
-    tag: ""  # set by CD to the promoted image digest
+    tag: ""  # set by CD to the promoted immutable tag
 defaults:
   replicas: 3
   autoscaling: {minReplicas: 3, maxReplicas: 20}
 ingress:
   host: api.finsight.dev
+  certificateArn: ""  # ACM certificate ARN for api.finsight.dev
+  wafAclArn: ""       # (terraform)
+s3:
+  bucket: ""          # (terraform)
+networkPolicy:
+  vpcCidr: ""         # (terraform)
+config:
+  FINSIGHT_JWT_ISSUER: https://identity.finsight.dev
+services:
+  ingestion-service:
+    serviceAccount: {roleArn: ""}  # (terraform)
+  normalization-service:
+    serviceAccount: {roleArn: ""}  # (terraform)

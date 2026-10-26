@@ -1,2 +1,4 @@
 region      = "eu-west-1"
-github_repo = "sicrwanda/finsight"
+github_repo = "manziosee/FinSight"
+# Your office/VPN egress IPs, if the API must be reachable from outside the VPC:
+# eks_public_access_cidrs = ["203.0.113.10/32"]

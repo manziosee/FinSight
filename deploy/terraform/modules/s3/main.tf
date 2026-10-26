@@ -60,3 +60,4 @@ resource "aws_s3_bucket_lifecycle_configuration" "raw" {
 
 output "bucket_name" { value = aws_s3_bucket.raw.id }
 output "kms_key_arn" { value = aws_kms_key.raw.arn }
+output "bucket_arn" { value = aws_s3_bucket.raw.arn }

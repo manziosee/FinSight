@@ -1,8 +1,32 @@
+# Staging overrides. Fill the (terraform) values from
+#   terraform -chdir=deploy/terraform/envs/staging output -json helm_values
 global:
   env: staging
 ingress:
   host: api.staging.finsight.dev
+  certificateArn: ""
+  wafAclArn: ""       # (terraform)
+s3:
+  bucket: ""          # (terraform)
+networkPolicy:
+  vpcCidr: ""         # (terraform)
+services:
+  api-gateway:
+    extraEnv:
+      FINSIGHT_TRUSTED_HOSTS: '["api.staging.finsight.dev"]'
+      FINSIGHT_TRUSTED_PROXY_HOPS: "1"
+  ingestion-service:
+    serviceAccount: {roleArn: ""}  # (terraform)
+  normalization-service:
+    serviceAccount: {roleArn: ""}  # (terraform)
 defaults:
   replicas: 1
   autoscaling: {enabled: false}
   podDisruptionBudget: {enabled: false}
+neo4j:
+  storage: 5Gi
+  heap: 512m
+  pageCache: 256m
+  resources:
+    requests: {cpu: 100m, memory: 1Gi}
+    limits: {cpu: "1", memory: 1Gi}

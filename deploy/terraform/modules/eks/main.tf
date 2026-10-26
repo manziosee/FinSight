@@ -16,6 +16,24 @@ variable "node_instance_types" {
   type    = list(string)
   default = ["m6i.large"]
 }
+variable "endpoint_public_access_cidrs" {
+  description = <<-EOT
+    CIDRs allowed to reach the Kubernetes API over the internet. Empty (default) = private
+    endpoint only, reachable from inside the VPC (e.g. a self-hosted CI runner or VPN).
+    Never 0.0.0.0/0.
+  EOT
+  type        = list(string)
+  default     = []
+  validation {
+    condition     = !contains(var.endpoint_public_access_cidrs, "0.0.0.0/0")
+    error_message = "Do not expose the EKS API to the whole internet."
+  }
+}
+variable "deploy_role_arn" {
+  description = "IAM role (GitHub OIDC) granted cluster access for helm deploys."
+  type        = string
+  default     = null
+}
 variable "node_min" { default = 2 }
 variable "node_max" { default = 6 }
 variable "tags" {
@@ -30,8 +48,26 @@ module "eks" {
   cluster_name    = var.name
   cluster_version = var.kubernetes_version
 
-  cluster_endpoint_public_access  = true
-  cluster_endpoint_private_access = true
+  cluster_endpoint_public_access       = length(var.endpoint_public_access_cidrs) > 0
+  cluster_endpoint_public_access_cidrs = var.endpoint_public_access_cidrs
+  cluster_endpoint_private_access      = true
+
+  # EKS access entries (not the aws-auth ConfigMap): the CI deploy role may run helm.
+  authentication_mode = "API"
+  access_entries = var.deploy_role_arn == null ? {} : {
+    gha_deploy = {
+      principal_arn = var.deploy_role_arn
+      policy_associations = {
+        # Cluster-wide because the chart's CRs (ExternalSecret, ServiceMonitor) and the
+        # namespace itself are created by the deploy. Narrow to a namespace-scoped
+        # AmazonEKSEditPolicy once those exist out-of-band.
+        admin = {
+          policy_arn   = "arn:aws:eks::aws:cluster-access-policy/AmazonEKSClusterAdminPolicy"
+          access_scope = { type = "cluster" }
+        }
+      }
+    }
+  }
 
   vpc_id     = var.vpc_id
   subnet_ids = var.subnet_ids
