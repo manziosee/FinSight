@@ -1,0 +1,9 @@
+{
+  "identities": [
+    {
+      "name": "finsight-local",
+      "credentials": [{"accessKey": "finsight", "secretKey": "finsight_local_pw"}],
+      "actions": ["Admin", "Read", "Write", "List", "Tagging"]
+    }
+  ]
+}

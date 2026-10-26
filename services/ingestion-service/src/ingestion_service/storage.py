@@ -1,4 +1,4 @@
-"""Object-storage adapter (MinIO locally, S3 in prod) via aioboto3."""
+"""Object-storage adapter (SeaweedFS locally, S3/Tigris in prod) via aioboto3."""
 
 from __future__ import annotations
 

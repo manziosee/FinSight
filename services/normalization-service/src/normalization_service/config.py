@@ -11,7 +11,7 @@ class Settings(ServiceSettings):
     normalization_db_dsn: str = (
         "postgresql+asyncpg://finsight:finsight_local_pw@localhost:5432/normalization"
     )
-    # Unset = real AWS S3 with the default credential chain (IRSA on EKS). MinIO/Tigris
+    # Unset = real AWS S3 with the default credential chain (IRSA on EKS). SeaweedFS/Tigris
     # set the endpoint and static keys explicitly (docker-compose, Fly secrets).
     s3_endpoint_url: str | None = None
     s3_region: str = "us-east-1"

@@ -23,7 +23,7 @@ up: ## Start the full local stack
 	@echo "Grafana:       http://localhost:13000 (admin / GRAFANA_ADMIN_PASSWORD in .env)"
 	@echo "Jaeger:        http://localhost:16686"
 	@echo "Redpanda UI:   http://localhost:18082"
-	@echo "MinIO console: http://localhost:19001"
+	@echo "S3 browser:    http://localhost:19001"
 
 .PHONY: down
 down: ## Stop the local stack
