@@ -9,4 +9,6 @@ service's spec and namespacing paths).
 - Aggregation: `src/api_gateway/openapi.py` (rebuilt lazily on a 30s TTL; at most every 5s while upstreams boot)
 - Public (no-auth) paths, exact match: `/v1/auth/token`, `/.well-known/jwks.json` (plus the gateway's own ops/docs routes)
 - Rate limits: per principal; anonymous callers per client IP taken from `X-Forwarded-For` (`FINSIGHT_TRUSTED_PROXY_HOPS`, default 1); `/v1/auth/token` additionally capped at `FINSIGHT_TOKEN_RATE_LIMIT_PER_MINUTE` (default 20) per IP
-- Port 8000. Local: behind Traefik at http://localhost:8088
+- Port 8000. Local: behind Traefik at http://localhost:8088 (directly at http://localhost:18000)
+- Live: https://finsight-api-gateway.fly.dev (docs at `/docs`, spec at `/openapi.json`)
+- Production requires explicit `FINSIGHT_TRUSTED_HOSTS` and `FINSIGHT_CORS_ALLOW_ORIGINS`

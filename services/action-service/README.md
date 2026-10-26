@@ -1,5 +1,12 @@
 # action-service
 
-SCAFFOLD. Approval-gated action execution and the discoverable tool catalog for AI agents (MCP-style). Endpoints: GET /v1/actions/catalog, POST /v1/actions/execute. Actions are recorded as pending_approval, never executed.
+🧪 **Scaffold.** Approval-gated actions and a discoverable tool catalog for AI agents
+(MCP-style). Requested actions are recorded as `pending_approval` and never executed.
 
-Port 8000. Shared building blocks come from `finsight-common`. See [ARCHITECTURE.md](../../ARCHITECTURE.md).
+| Endpoint | Scope |
+|---|---|
+| `GET /v1/actions/catalog` | `actions:execute` |
+| `POST /v1/actions/execute` | `actions:execute` |
+
+Port 8000 (`/health`, `/ready`, `/metrics`, `/docs`). Shared building blocks come from
+[finsight-common](../../libs/finsight-common). See [ARCHITECTURE.md](../../ARCHITECTURE.md).

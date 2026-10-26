@@ -19,7 +19,7 @@ registry, and keyless CI deploys. The team picked AWS.
   long-lived keys. Production deploy gated by a GitHub Environment approval.
 - **State:** Terraform, S3 backend + DynamoDB lock, one root module per environment.
 
-Local dev deliberately mirrors this with Compose (Redpanda↔MSK, MinIO↔S3, containers↔RDS/Redis)
+Local dev deliberately mirrors this with Compose (Redpanda↔MSK, SeaweedFS↔S3, containers↔RDS/Redis)
 so the same env-var contract works everywhere.
 
 ## Consequences

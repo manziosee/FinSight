@@ -1,5 +1,12 @@
 # anomaly-service
 
-SCAFFOLD. Rule + statistical checks (amount z-score, duplicate payment). Endpoints: POST /v1/anomalies/detect, POST /v1/anomalies/explain. ML models are TODO.
+🧪 **Scaffold.** Rule + statistical checks (amount z-score, duplicate payments); ML models
+are not built yet.
 
-Port 8000. Shared building blocks come from `finsight-common`. See [ARCHITECTURE.md](../../ARCHITECTURE.md).
+| Endpoint | Scope |
+|---|---|
+| `POST /v1/anomalies/detect` | `anomalies:read` |
+| `POST /v1/anomalies/explain` | `anomalies:read` |
+
+Port 8000 (`/health`, `/ready`, `/metrics`, `/docs`). Shared building blocks come from
+[finsight-common](../../libs/finsight-common). See [ARCHITECTURE.md](../../ARCHITECTURE.md).

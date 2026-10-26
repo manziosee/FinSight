@@ -1,5 +1,7 @@
 # FinSight Console
 
+Live: **https://finsight-console.fly.dev** (talks to https://finsight-api-gateway.fly.dev).
+
 A thin reference UI for the FinSight API — proof that the API is actually usable, not a
 product surface in its own right. Next.js (App Router), TypeScript, no UI framework: it
 calls the gateway directly from the browser with `fetch`, nothing more.
@@ -28,7 +30,9 @@ npm run dev
 ```
 
 Requires the FinSight stack running (`make up` from the repo root) and the seeded demo
-client (`demo-client` / `demo-secret`).
+client (`demo-client` / `demo-secret`, the local defaults from `.env.example`). The gateway
+allows browser calls from `http://localhost:3300` (Compose) — for `npm run dev` on port 3000,
+add that origin to the gateway's `FINSIGHT_CORS_ALLOW_ORIGINS`.
 
 ## Checks
 
@@ -48,5 +52,14 @@ docker run -p 3000:3000 finsight/console
 
 `NEXT_PUBLIC_*` variables are inlined into the client bundle at **build** time (Next.js
 convention) — set `NEXT_PUBLIC_FINSIGHT_API_URL` as a build arg, not a runtime env var, if
-you rebuild the image per environment. Also part of `docker-compose.yml` (`console`
-service, port 3300) and `deploy/fly/console.toml`.
+you rebuild the image per environment. The same URL is baked into the Content-Security-Policy
+(`connect-src`), so the page can only talk to that API. Also part of `docker-compose.yml`
+(`console` service, port 3300).
+
+## Fly.io
+
+Configured by [fly.toml](fly.toml) (its own build context, unlike the Python services):
+
+```bash
+cd console && fly deploy --ha=false
+```

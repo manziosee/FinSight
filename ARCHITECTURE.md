@@ -24,7 +24,7 @@ C4Context
 ```mermaid
 flowchart TB
   subgraph edge[Edge]
-    TR[Traefik]
+    TR[Traefik · Fly proxy · ALB+WAF]
     GW[api-gateway<br/>auth · routing · OpenAPI aggregation · rate limit]
   end
   subgraph core[Core services]
@@ -44,7 +44,7 @@ flowchart TB
     PG[(PostgreSQL)]
     NEO[(Neo4j)]
     RD[(Redis)]
-    S3[(S3 / MinIO)]
+    S3[(S3 / SeaweedFS)]
     K[[Kafka / Redpanda]]
   end
 
@@ -107,12 +107,26 @@ idempotent (dedupe on record / ingestion id).
 * **Errors:** RFC 9457 `application/problem+json` everywhere.
 * **Config:** 12-factor via `pydantic-settings`, `FINSIGHT_` prefix.
 
-## 6. Deployment topology (AWS)
+## 6. Deployment topologies
 
-VPC (3 AZ) · EKS managed node group · RDS PostgreSQL (Multi-AZ) · MSK (Kafka, TLS) ·
-ElastiCache Redis · S3 (versioned, SSE-KMS) · ECR (immutable tags). Neo4j runs on EKS via its
-Helm chart (swap path to Amazon Neptune: ADR 0004). Secrets via AWS Secrets Manager +
-External Secrets Operator. Ingress via Traefik + cert-manager. GitHub Actions deploys through
-OIDC (no static keys).
+The same images run in three places. Traefik is the edge only in local Compose.
+
+| | Local (Compose) | Fly.io (live) | AWS (EKS) |
+|---|---|---|---|
+| Edge | Traefik → gateway | Fly proxy (TLS) → gateway | ALB + WAF (ACM TLS) → gateway |
+| Kafka | Redpanda | Redpanda app (private) | MSK, SASL/SCRAM over TLS |
+| PostgreSQL | one container, a DB per service | Fly Postgres, a DB **and user** per service | RDS Multi-AZ, a login per service, TLS enforced |
+| Neo4j | container | Neo4j app (private, volume) | StatefulSet in the cluster |
+| Object storage | SeaweedFS | Tigris | S3 (SSE-KMS) via IRSA |
+| Redis | container (password) | Redis app (private, password) | ElastiCache (TLS + AUTH) |
+| Secrets | `.env` via Compose interpolation | Fly secrets, per app | Secrets Manager → External Secrets |
+
+**Fly.io:** each service is its own app on Fly's private IPv6 network (`*.internal`); only
+the gateway and console have public IPs. See [deploy/fly](deploy/fly/README.md).
+
+**AWS:** VPC across 3 AZs (NAT per AZ in production) · EKS with a private API endpoint ·
+ECR (immutable tags) · default-deny NetworkPolicies · GuardDuty and CloudTrail. Neo4j runs
+in-cluster (swap path to Amazon Neptune: ADR 0004). GitHub Actions deploys through OIDC (no
+static keys). See [deploy/terraform](deploy/terraform/README.md).
 
 See [docs/adr/](docs/adr/) for the decisions behind all of this.
