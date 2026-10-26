@@ -17,12 +17,13 @@ def upgrade() -> None:
     bind = op.get_bind()
     columns = {column["name"] for column in sa.inspect(bind).get_columns("ingestions")}
     additions = (
-        ("record_count", sa.Column("record_count", sa.Integer(), nullable=False, server_default="0")),
+        (
+            "record_count",
+            sa.Column("record_count", sa.Integer(), nullable=False, server_default="0"),
+        ),
         (
             "warnings",
-            sa.Column(
-                "warnings", sa.JSON(), nullable=False, server_default=sa.text("'[]'")
-            ),
+            sa.Column("warnings", sa.JSON(), nullable=False, server_default=sa.text("'[]'")),
         ),
         ("error_summary", sa.Column("error_summary", sa.String(1000), nullable=True)),
         ("completed_at", sa.Column("completed_at", sa.DateTime(timezone=True), nullable=True)),

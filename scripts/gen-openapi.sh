@@ -25,11 +25,13 @@ for mod in modules:
     spec = app.openapi()
     with open(f"{out_dir}/{mod}.openapi.json", "w") as fh:
         json.dump(spec, fh, indent=2)
+        fh.write("\n")  # match end-of-file-fixer, so CI's regenerate-and-diff is stable
     specs[mod.removesuffix("_service")] = spec
 
 merged = merge_openapi_specs(specs)
 
 with open(f"{out_dir}/finsight.openapi.json", "w") as fh:
     json.dump(merged, fh, indent=2)
+    fh.write("\n")
 print(f"wrote {out_dir}/finsight.openapi.json with {len(merged['paths'])} paths")
 EOF

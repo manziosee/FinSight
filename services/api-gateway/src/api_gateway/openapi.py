@@ -37,8 +37,10 @@ def merge_openapi_specs(specs: dict[str, dict[str, Any]]) -> dict[str, Any]:
         if isinstance(value, dict):
             rewritten = {}
             for key, item in value.items():
-                if key == "$ref" and isinstance(item, str) and item.startswith(
-                    "#/components/schemas/"
+                if (
+                    key == "$ref"
+                    and isinstance(item, str)
+                    and item.startswith("#/components/schemas/")
                 ):
                     name = item.rsplit("/", 1)[-1]
                     item = f"#/components/schemas/{schema_names.get(name, name)}"
@@ -60,16 +62,14 @@ def merge_openapi_specs(specs: dict[str, dict[str, Any]]) -> dict[str, Any]:
                     for tag_name in operation.get("tags", []):
                         if tag_name not in {tag.get("name") for tag in merged["tags"]}:
                             merged["tags"].append({"name": tag_name})
-                if (
+                is_public = (
                     path == "/v1/auth/token" and method.lower() == "post"
-                ) or path == "/.well-known/jwks.json":
-                    if isinstance(operation, dict):
-                        operation["security"] = []
+                ) or path == "/.well-known/jwks.json"
+                if is_public and isinstance(operation, dict):
+                    operation["security"] = []
             merged["paths"].setdefault(path, {}).update(operations)
         for name, schema in schemas.items():
-            merged["components"]["schemas"][schema_names[name]] = rewrite_refs(
-                schema, schema_names
-            )
+            merged["components"]["schemas"][schema_names[name]] = rewrite_refs(schema, schema_names)
         tag_names = {tag.get("name") for tag in merged["tags"]}
         for tag in spec.get("tags", []):
             if tag.get("name") not in tag_names:

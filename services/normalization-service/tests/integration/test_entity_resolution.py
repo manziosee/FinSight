@@ -7,11 +7,11 @@ from __future__ import annotations
 import datetime as dt
 
 import pytest
+from normalization_service.entities import EntityResolver
+from normalization_service.models import CanonicalEntity
 from sqlalchemy import select
 
 from finsight_common.schemas import FinancialRecord, Money, Party, RecordType
-from normalization_service.entities import EntityResolver
-from normalization_service.models import CanonicalEntity
 
 pytestmark = pytest.mark.integration
 
@@ -42,10 +42,14 @@ async def test_exact_and_fuzzy_names_resolve_to_one_canonical_entity(db) -> None
 
     async with db.session() as session:
         entities = (
-            await session.execute(
-                select(CanonicalEntity).where(CanonicalEntity.tenant_id == TENANT)
+            (
+                await session.execute(
+                    select(CanonicalEntity).where(CanonicalEntity.tenant_id == TENANT)
+                )
             )
-        ).scalars().all()
+            .scalars()
+            .all()
+        )
 
     assert len(entities) == 1
     entity = entities[0]
@@ -64,10 +68,14 @@ async def test_distinct_counterparties_stay_separate(db) -> None:
 
     async with db.session() as session:
         entities = (
-            await session.execute(
-                select(CanonicalEntity).where(CanonicalEntity.tenant_id == TENANT)
+            (
+                await session.execute(
+                    select(CanonicalEntity).where(CanonicalEntity.tenant_id == TENANT)
+                )
             )
-        ).scalars().all()
+            .scalars()
+            .all()
+        )
     assert len(entities) == 2
 
 
@@ -84,9 +92,13 @@ async def test_resolution_persists_across_separate_sessions(db) -> None:
 
     async with db.session() as session:
         entities = (
-            await session.execute(
-                select(CanonicalEntity).where(CanonicalEntity.tenant_id == TENANT)
+            (
+                await session.execute(
+                    select(CanonicalEntity).where(CanonicalEntity.tenant_id == TENANT)
+                )
             )
-        ).scalars().all()
+            .scalars()
+            .all()
+        )
     assert len(entities) == 1
     assert entities[0].seen_count == 2

@@ -127,6 +127,8 @@ async def _on_data_ingested(body: dict) -> None:
         warnings=result.warnings,
         recognised=result.recognised,
     )
+
+
 async def _startup() -> None:
     db = _database()
     if not settings.is_production:

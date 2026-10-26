@@ -214,6 +214,8 @@
         "properties": {
           "name": {
             "type": "string",
+            "maxLength": 255,
+            "minLength": 1,
             "title": "Name",
             "examples": [
               "ci-pipeline"
@@ -224,7 +226,9 @@
               "type": "string"
             },
             "type": "array",
-            "title": "Scopes"
+            "maxItems": 64,
+            "title": "Scopes",
+            "description": "Must be a subset of the scopes held by the calling token."
           }
         },
         "type": "object",
