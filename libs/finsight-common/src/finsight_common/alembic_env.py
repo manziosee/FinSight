@@ -9,15 +9,17 @@ from alembic import context
 from sqlalchemy import pool
 from sqlalchemy.ext.asyncio import async_engine_from_config
 
-from finsight_common.db import Base
+from finsight_common.db import Base, async_dsn
 
 
 def run(dsn: str, target_metadata_modules: Sequence[str]) -> None:
     for mod in target_metadata_modules:
         __import__(mod)  # register models on Base.metadata
 
+    dsn = async_dsn(dsn)
     cfg = context.config
-    cfg.set_main_option("sqlalchemy.url", dsn)
+    # ConfigParser treats % as interpolation; escape it (URL-encoded passwords contain %).
+    cfg.set_main_option("sqlalchemy.url", dsn.replace("%", "%%"))
     target_metadata = Base.metadata
 
     def do_run(connection) -> None:

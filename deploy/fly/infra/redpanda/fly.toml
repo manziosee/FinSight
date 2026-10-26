@@ -1,0 +1,30 @@
+# finsight-redpanda — single-node Kafka-compatible event bus. PRIVATE: no public IPs and
+# no [http_service]; services reach it at finsight-redpanda.internal:9092 over Fly's
+# WireGuard-encrypted private network (PLAINTEXT inside it).
+#   fly deploy deploy/fly/infra/redpanda --config deploy/fly/infra/redpanda/fly.toml --ha=false
+app = "finsight-redpanda"
+primary_region = "jnb"
+
+[build]
+  dockerfile = "Dockerfile"
+
+[processes]
+  # dev-container mode: single-node defaults incl. topic auto-creation.
+  app = "redpanda start --mode dev-container --smp 1 --memory 640M --default-log-level=warn --kafka-addr PLAINTEXT://[::]:9092 --advertise-kafka-addr PLAINTEXT://finsight-redpanda.internal:9092 --rpc-addr [::]:33145 --advertise-rpc-addr finsight-redpanda.internal:33145"
+
+[[mounts]]
+  source = "redpanda_data"
+  destination = "/var/lib/redpanda/data"
+
+[checks]
+  [checks.kafka]
+    type = "tcp"
+    port = 9092
+    interval = "15s"
+    timeout = "3s"
+    grace_period = "30s"
+
+[[vm]]
+  cpu_kind = "shared"
+  cpus = 1
+  memory = "1gb"

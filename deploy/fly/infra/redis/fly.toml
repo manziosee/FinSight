@@ -1,0 +1,26 @@
+# finsight-redis — gateway rate-limit store. PRIVATE (no public IPs, no [http_service]),
+# password from the REDIS_PASSWORD Fly secret, no persistence (counters are ephemeral).
+#   fly deploy deploy/fly/infra/redis --config deploy/fly/infra/redis/fly.toml --ha=false
+app = "finsight-redis"
+primary_region = "jnb"
+
+[build]
+  # Dockerfile only to pin the image by digest (Fly's `image =` rejects tag@digest).
+  dockerfile = "Dockerfile"
+
+[processes]
+  # Redis 7 with no config file listens on all IPv4 and IPv6 addresses.
+  app = "sh -c 'exec redis-server --save \"\" --appendonly no --maxmemory 128mb --maxmemory-policy allkeys-lru --requirepass \"$REDIS_PASSWORD\"'"
+
+[checks]
+  [checks.redis]
+    type = "tcp"
+    port = 6379
+    interval = "15s"
+    timeout = "3s"
+    grace_period = "10s"
+
+[[vm]]
+  cpu_kind = "shared"
+  cpus = 1
+  memory = "256mb"

@@ -4,7 +4,7 @@ app = "finsight-api-gateway"
 primary_region = "jnb"
 
 [build]
-  dockerfile = "Dockerfile"
+  dockerfile = "../../Dockerfile"  # relative to this file: the repo-root Dockerfile
 
 [build.args]
   SERVICE = "api-gateway"
@@ -13,6 +13,8 @@ primary_region = "jnb"
   FINSIGHT_ENV = "production"
   FINSIGHT_LOG_LEVEL = "INFO"
   FINSIGHT_SERVICE = "api-gateway"
+  # Fly private networking (*.internal) is IPv6: bind dual-stack.
+  UVICORN_HOST = "::"
   # Production refuses a wildcard; add a custom domain here when one is attached.
   FINSIGHT_TRUSTED_HOSTS = '["finsight-api-gateway.fly.dev"]'
   FINSIGHT_CORS_ALLOW_ORIGINS = '["https://finsight-console.fly.dev"]'

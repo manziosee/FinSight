@@ -36,11 +36,16 @@ ARG SERVICE
 #   the service. Never "*" on an internet-facing listener (clients could spoof their IP).
 # WEB_CONCURRENCY: uvicorn worker processes. Keep 1 and scale with replicas — every worker
 #   would start its own Kafka consumers and outbox relay.
+# UVICORN_HOST/PORT: bind address. Fly's private .internal network is IPv6-only, so the
+#   Fly configs set UVICORN_HOST="::"; finsight_common.serve then binds a dual-stack
+#   socket (IPv4 too, for health checks). 0.0.0.0 suits Docker/Kubernetes.
 ENV PATH="/app/.venv/bin:${PATH}" \
     PYTHONUNBUFFERED=1 \
     FINSIGHT_SERVICE=${SERVICE} \
     FORWARDED_ALLOW_IPS=127.0.0.1 \
-    WEB_CONCURRENCY=1
+    WEB_CONCURRENCY=1 \
+    UVICORN_HOST=0.0.0.0 \
+    UVICORN_PORT=8000
 RUN groupadd --system app && useradd --system --gid app --uid 10001 app
 WORKDIR /app
 COPY --from=builder --chown=app:app /app /app
@@ -49,5 +54,5 @@ EXPOSE 8000
 # stdlib-only probe: no curl (and its CVE surface) in the runtime image.
 HEALTHCHECK --interval=15s --timeout=3s --start-period=20s --retries=4 \
     CMD ["python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=2)"]
-# SERVICE dir name -> python module (identity-service -> identity_service)
-CMD ["sh", "-c", "exec uvicorn \"$(echo \"$FINSIGHT_SERVICE\" | tr - _).main:app\" --host 0.0.0.0 --port 8000 --proxy-headers --no-server-header"]
+# Runs <FINSIGHT_SERVICE>.main:app (identity-service -> identity_service) under uvicorn.
+CMD ["python", "-m", "finsight_common.serve"]

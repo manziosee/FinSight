@@ -4,7 +4,7 @@ app = "finsight-reconciliation-service"
 primary_region = "jnb"
 
 [build]
-  dockerfile = "Dockerfile"
+  dockerfile = "../../Dockerfile"  # relative to this file: the repo-root Dockerfile
 
 [deploy]
   release_command = "alembic -c services/reconciliation-service/alembic.ini upgrade head"
@@ -16,6 +16,8 @@ primary_region = "jnb"
   FINSIGHT_ENV = "production"
   FINSIGHT_LOG_LEVEL = "INFO"
   FINSIGHT_SERVICE = "reconciliation-service"
+  # Fly private networking (*.internal) is IPv6: bind dual-stack.
+  UVICORN_HOST = "::"
 
 [http_service]
   internal_port = 8000

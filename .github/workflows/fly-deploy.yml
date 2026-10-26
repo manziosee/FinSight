@@ -1,7 +1,10 @@
 name: Fly Deploy
 
+# Deploys only code that passed CI: runs after the CI workflow succeeds on main.
 on:
-  push:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
     branches: [main]
   workflow_dispatch:
 
@@ -9,9 +12,13 @@ concurrency:
   group: fly-deploy
   cancel-in-progress: false
 
+permissions:
+  contents: read
+
 jobs:
   guard:
     runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
     outputs:
       enabled: ${{ steps.c.outputs.enabled }}
     steps:
@@ -43,5 +50,14 @@ jobs:
           - api-gateway
     steps:
       - uses: actions/checkout@v4
-      - uses: superfly/flyctl-actions/setup-flyctl@master
-      - run: flyctl deploy --config deploy/fly/${{ matrix.service }}.toml --remote-only --wait-timeout 600
+        with:
+          # the commit CI tested, not whatever main points at now
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+      - uses: superfly/flyctl-actions/setup-flyctl@v1
+      - name: Deploy ${{ matrix.service }}
+        run: |
+          # Only the gateway is public; never let a deploy allocate IPs for internal apps.
+          EXTRA=""
+          [ "${{ matrix.service }}" = "api-gateway" ] || EXTRA="--no-public-ips"
+          flyctl deploy . --config "$PWD/deploy/fly/${{ matrix.service }}.toml" \
+            --remote-only --ha=false --wait-timeout 600 $EXTRA
