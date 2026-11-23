@@ -15,6 +15,15 @@ updates:
   - package-ecosystem: "docker"
     directory: "/console"
     schedule: {interval: "weekly"}
+  - package-ecosystem: "docker"
+    directory: "/frontend"
+    schedule: {interval: "weekly"}
+  - package-ecosystem: "bun"
+    directory: "/frontend"
+    schedule: {interval: "weekly"}
+    groups:
+      frontend-minor:
+        update-types: ["minor", "patch"]
   - package-ecosystem: "terraform"
     directory: "/deploy/terraform"
     schedule: {interval: "weekly"}

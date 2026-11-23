@@ -19,3 +19,4 @@ infra
 # made every service build upload ~500 MB.
 console
 scripts
+frontend

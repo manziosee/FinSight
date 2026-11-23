@@ -330,6 +330,21 @@ services:
     ports: ["${FINSIGHT_BIND_ADDR:-127.0.0.1}:3300:3000"]
     networks: [finsight]
 
+  # FinSight frontend (TanStack Start). Server-side session + /api proxy to the gateway,
+  # so the browser never holds an API token. Sign in with demo-client / FINSIGHT_SEED_CLIENT_SECRET.
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    environment:
+      FINSIGHT_API_URL: http://api-gateway:8000
+      FINSIGHT_PUBLIC_API_URL: http://localhost:8088
+    depends_on:
+      api-gateway: {condition: service_healthy}
+    ports: ["${FINSIGHT_BIND_ADDR:-127.0.0.1}:3400:3000"]
+    networks: [finsight]
+
 networks:
   finsight: {}
 

@@ -22,6 +22,7 @@ multi-format, multi-currency** real-world financial data extremely well.
 | Interactive API docs | https://finsight-api-gateway.fly.dev/docs |
 | OpenAPI spec | https://finsight-api-gateway.fly.dev/openapi.json |
 | Console (reference UI) | https://finsight-console.fly.dev |
+| Workspace frontend | https://finsight-frontend.fly.dev — once deployed (`cd frontend && fly deploy`, see [frontend](frontend/README.md#deploy)) |
 
 Hosted on [Fly.io](https://fly.io) in Johannesburg (`jnb`). See [deploy/fly](deploy/fly/README.md).
 
@@ -32,6 +33,7 @@ Hosted on [Fly.io](https://fly.io) in Johannesburg (`jnb`). See [deploy/fly](dep
 | Layer | Technology |
 |---|---|
 | Services | ![Python](https://img.shields.io/badge/Python-3.12-3776AB?logo=python&logoColor=white) ![FastAPI](https://img.shields.io/badge/FastAPI-009688?logo=fastapi&logoColor=white) ![Pydantic](https://img.shields.io/badge/Pydantic-E92063?logo=pydantic&logoColor=white) ![SQLAlchemy](https://img.shields.io/badge/SQLAlchemy-D71F00?logo=sqlalchemy&logoColor=white) ![uv](https://img.shields.io/badge/uv-workspace-DE5FE9?logo=uv&logoColor=white) |
+| Frontend | ![TanStack Start](https://img.shields.io/badge/TanStack_Start-FF4154?logo=reactquery&logoColor=white) ![React](https://img.shields.io/badge/React_19-20232A?logo=react&logoColor=61DAFB) ![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?logo=typescript&logoColor=white) ![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-06B6D4?logo=tailwindcss&logoColor=white) ![shadcn/ui](https://img.shields.io/badge/shadcn%2Fui-000000?logo=shadcnui&logoColor=white) ![Bun](https://img.shields.io/badge/Bun-000000?logo=bun&logoColor=white) ![Vitest](https://img.shields.io/badge/Vitest-6E9F18?logo=vitest&logoColor=white) |
 | Console | ![Next.js](https://img.shields.io/badge/Next.js-000000?logo=nextdotjs&logoColor=white) ![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?logo=typescript&logoColor=white) ![React](https://img.shields.io/badge/React-20232A?logo=react&logoColor=61DAFB) |
 | Events | ![Apache Kafka](https://img.shields.io/badge/Kafka_API-231F20?logo=apachekafka&logoColor=white) ![Redpanda](https://img.shields.io/badge/Redpanda-E2401B) |
 | Data | ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-4169E1?logo=postgresql&logoColor=white) ![Neo4j](https://img.shields.io/badge/Neo4j-5-4581C3?logo=neo4j&logoColor=white) ![Redis](https://img.shields.io/badge/Redis-7-DC382D?logo=redis&logoColor=white) ![S3](https://img.shields.io/badge/S3_object_storage-569A31) |
@@ -47,6 +49,8 @@ Hosted on [Fly.io](https://fly.io) in Johannesburg (`jnb`). See [deploy/fly](dep
 
 ```mermaid
 flowchart LR
+  user([Finance team]) --> FE[frontend<br/>session cookie · /api proxy]
+  FE -->|server-side, JWT| GW
   client([API client / Console]) -->|HTTPS + JWT or API key| GW[api-gateway<br/>auth · rate limit · routing]
   GW --> ID[identity-service<br/>OAuth2 · API keys · JWKS]
   GW --> IN[ingestion-service]
@@ -87,6 +91,22 @@ flowchart LR
 
 Details: [ARCHITECTURE.md](ARCHITECTURE.md) and the decisions behind it in [docs/adr/](docs/adr/).
 
+## The workspace frontend
+
+[frontend/](frontend/README.md) is the product UI for finance teams: dashboard, uploads with live
+normalization status, the reconciliation review queue (keyboard-driven, AI explanations),
+Ask FinSight, anomalies, forecast, approvals, reports, audit log and a developer area. It is a
+TanStack Start app with its own server:
+
+- **No tokens in the browser.** Sign-in exchanges an API client's credentials on the frontend's
+  server, which keeps the token in an httpOnly, `SameSite=Strict` cookie and proxies
+  `/api/v1/*` to the gateway. Every call is same-origin, so the CSP can say `connect-src 'self'`.
+- **Live and sample data.** Signed in, every page runs on your tenant's live data; visitors get a
+  clearly labelled sample workspace.
+- **Honest about gaps.** Every existing API endpoint is wired in. Features the API doesn't offer
+  yet (user accounts, a transactions list, match detail, approve/reject, …) are marked on the
+  page and listed in [frontend/API-GAPS.md](frontend/API-GAPS.md).
+
 ## Services
 
 | Service | Role | Status |
@@ -101,7 +121,8 @@ Details: [ARCHITECTURE.md](ARCHITECTURE.md) and the decisions behind it in [docs
 | [anomaly-service](services/anomaly-service) | Rule + statistical anomaly detection | 🧪 scaffold |
 | [forecast-service](services/forecast-service) | Cash-flow forecasting & simulation | 🧪 scaffold |
 | [action-service](services/action-service) | Approval-gated actions + AI-agent tool surface | 🧪 scaffold |
-| [console](console) | Next.js reference UI: connect, upload, review queue, ask, audit | ✅ real |
+| [frontend](frontend) | Workspace UI (TanStack Start): every API feature, server-side session | ✅ real |
+| [console](console) | Minimal Next.js reference UI (superseded by `frontend`) | ✅ real |
 
 Shared building blocks (app factory, auth, events, outbox, logging, telemetry) live in
 [libs/finsight-common](libs/finsight-common).
@@ -128,7 +149,8 @@ All host ports bind to `127.0.0.1` (set `FINSIGHT_BIND_ADDR=0.0.0.0` in `.env` t
 
 | URL | What |
 |---|---|
-| http://localhost:3300 | **Console** |
+| http://localhost:3400 | **Workspace frontend** — sign in with `demo-client` / `demo-secret` |
+| http://localhost:3300 | Console (minimal reference UI) |
 | http://localhost:8088/docs | Unified FinSight API (Traefik → gateway) |
 | http://localhost:18000/docs | Gateway directly (bypasses Traefik) |
 | http://localhost:18081 | Swagger UI for the committed aggregated spec |
@@ -140,7 +162,7 @@ All host ports bind to `127.0.0.1` (set `FINSIGHT_BIND_ADDR=0.0.0.0` in `.env` t
 ### 2. Fly.io — live
 
 Every service is its own Fly app on Fly's private, WireGuard-encrypted network. Only the
-gateway and the console are public. Redpanda, Neo4j and Redis run as private apps with
+gateway, the console and the frontend are public. Redpanda, Neo4j and Redis run as private apps with
 volumes; PostgreSQL is Fly Postgres with **one database and one user per service**; raw files
 go to a Tigris bucket. Provisioning, secrets and deploys are scripted:
 [deploy/fly/README.md](deploy/fly/README.md).
@@ -158,7 +180,7 @@ Neo4j in-cluster. Default-deny NetworkPolicies, non-root read-only containers.
 
 ## Quick start (local)
 
-Requires Docker and [uv](https://docs.astral.sh/uv/).
+Requires Docker and [uv](https://docs.astral.sh/uv/) (and [Bun](https://bun.sh) to work on the frontend).
 
 ```bash
 make bootstrap     # create .env and generate local secrets (Redis, Grafana, JWT key)
@@ -191,6 +213,8 @@ make lint       # ruff + ruff format --check + mypy
 make test       # unit tests
 make test-all   # + integration tests (needs Docker)
 make openapi    # regenerate docs/api/*.openapi.json (CI fails if they're stale)
+
+cd frontend && bun install && FINSIGHT_API_URL=http://localhost:8088 bun run dev   # http://localhost:3500
 ```
 
 Coding standards and the contribution flow: [CONTRIBUTING.md](CONTRIBUTING.md).
@@ -199,7 +223,7 @@ Coding standards and the contribution flow: [CONTRIBUTING.md](CONTRIBUTING.md).
 
 | Workflow | What it does |
 |---|---|
-| [`ci.yml`](.github/workflows/ci.yml) | Lint, unit tests, OpenAPI drift check, console build, Terraform/Helm validation, image builds, full-stack e2e smoke test |
+| [`ci.yml`](.github/workflows/ci.yml) | Lint, unit tests, OpenAPI drift check, frontend (lint, types, tests, build), console build, Terraform/Helm validation, image builds, full-stack e2e smoke test |
 | [`security.yml`](.github/workflows/security.yml) | Gitleaks, Bandit, pip-audit, Semgrep, Trivy image scans, Checkov |
 | [`fly-deploy.yml`](.github/workflows/fly-deploy.yml) | Deploys to Fly after CI passes on `main` (needs the `FLY_API_TOKEN` secret) |
 | [`cd-staging.yml`](.github/workflows/cd-staging.yml) / [`cd-production.yml`](.github/workflows/cd-production.yml) | EKS: build → push to ECR → Helm upgrade, via GitHub OIDC (no static AWS keys) |
@@ -215,7 +239,8 @@ mutation. Report vulnerabilities privately: [SECURITY.md](SECURITY.md).
 ```
 services/          one FastAPI service per directory (src/, tests/, migrations/)
 libs/              finsight-common: shared app factory, auth, events, outbox, telemetry
-console/           Next.js reference UI
+frontend/          workspace UI (TanStack Start) with server-side session + API proxy
+console/           minimal Next.js reference UI
 deploy/fly/        Fly.io apps, provisioning and deploy scripts
 deploy/helm/       Helm chart for EKS
 deploy/terraform/  AWS infrastructure (modules + staging/production)
