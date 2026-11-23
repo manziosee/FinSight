@@ -49,7 +49,7 @@ jobs:
           - action-service
           - api-gateway
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           # the commit CI tested, not whatever main points at now
           ref: ${{ github.event.workflow_run.head_sha || github.sha }}
