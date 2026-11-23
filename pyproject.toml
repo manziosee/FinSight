@@ -66,6 +66,8 @@ exclude = ["migrations/", "build/", "dist/"]
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
+# pytest-asyncio 1.x: pin the loop scope for async fixtures (future default).
+asyncio_default_fixture_loop_scope = "function"
 addopts = "-ra -q --strict-markers"
 testpaths = ["libs", "services"]
 markers = [
