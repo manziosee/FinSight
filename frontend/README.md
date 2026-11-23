@@ -42,7 +42,7 @@ endpoint. The full list is in **[API-GAPS.md](API-GAPS.md)**.
 | Page              | Live features                                                                                                                                                  |
 | ----------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Home              | Reconciliation KPIs, open receivables by counterparty and currency, items needing attention, run reconciliation                                                |
-| Sources & uploads | Upload CSV / JSON / Excel / PDF (≤ 50 MB) with source type; live normalization status, record counts, warnings                                                 |
+| Sources & uploads | Upload CSV / JSON / Excel / PDF (≤ 50 MB; 4.5 MB on Vercel) with source type; live normalization status, record counts, warnings                               |
 | Reconciliation    | Run reconciliation, review queue, accept / reject / correct (keyboard A / R / J / K), bulk-accept ≥ 85 %, AI explanation per match, unmatched list, CSV export |
 | Transactions      | Normalize a single transaction (classification, direction, counterparty, confidence)                                                                           |
 | Counterparties    | Explore any entity in the financial graph; find paths between two entities                                                                                     |
@@ -91,7 +91,34 @@ bun run build         # production build → .output/server/index.mjs (Node)
 - **Docker:** `docker build -t finsight/frontend .` — Bun build stage, Node runtime, non-root,
   production security headers (CSP, HSTS, frame-deny, nosniff).
 - **Compose:** the `frontend` service in the repo's `docker-compose.yml` (port 3400).
-- **Fly.io:** [fly.toml](fly.toml) — `fly apps create finsight-frontend && fly deploy --ha=false`.
+- **Vercel (production):** see below.
+
+### Vercel
+
+The build detects Vercel (it sets `VERCEL=1`) and produces Vercel Functions instead of a Node
+server: static assets go to Vercel's CDN, and one Node function serves pages and the `/api/*`
+session and proxy routes. [vercel.json](vercel.json) sets the Bun install/build commands,
+security headers, and the function region **`cpt1` (Cape Town)**, the closest to the API gateway
+in Johannesburg; the default US region would add a transatlantic round trip to every API call.
+
+1. **Import the repository** in Vercel (New Project → `manziosee/FinSight`) and set **Root
+   Directory** to `frontend`. Leave Framework Preset as _Other_; `vercel.json` provides the
+   commands.
+2. **Environment variables** (Production, and Preview if you use it):
+
+    | Variable                  | Value                                  |
+    | ------------------------- | -------------------------------------- |
+    | `FINSIGHT_API_URL`        | `https://finsight-api-gateway.fly.dev` |
+    | `FINSIGHT_PUBLIC_API_URL` | `https://finsight-api-gateway.fly.dev` |
+
+3. **Deploy.** Or from a terminal: `cd frontend && npx vercel link && npx vercel --prod`.
+
+Then sign in with the live demo client (`demo-client`, secret in `deploy/fly/secrets.env`).
+
+**Upload size on Vercel:** Vercel Functions accept request bodies up to **4.5 MB**, so uploads
+through the frontend are capped there (the page says so before uploading). The API itself takes
+50 MB; larger files need direct-to-storage uploads, listed in [API-GAPS.md](API-GAPS.md). Set
+`FINSIGHT_MAX_UPLOAD_BYTES` to override the limit on another host.
 
 ## Project layout
 

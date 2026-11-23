@@ -36,6 +36,7 @@ function useSessionState() {
           }
         : null;
     const apiUrl = query.data?.apiUrl ?? "";
+    const maxUploadBytes = query.data?.maxUploadBytes ?? 50 * 1024 * 1024;
 
     const [currency, setCurrency] = useState<Currency>("RWF");
     const money = (amount: number, source: Currency) => displayMoney(amount, source, currency);
@@ -59,6 +60,7 @@ function useSessionState() {
     }
     const hasScope = (scope: string) => !!user?.scopes.includes(scope);
     return {
+        maxUploadBytes,
         mode,
         isLive: mode === "live",
         user,

@@ -22,9 +22,9 @@ multi-format, multi-currency** real-world financial data extremely well.
 | Interactive API docs | https://finsight-api-gateway.fly.dev/docs |
 | OpenAPI spec | https://finsight-api-gateway.fly.dev/openapi.json |
 | Console (reference UI) | https://finsight-console.fly.dev |
-| Workspace frontend | https://finsight-frontend.fly.dev — once deployed (`cd frontend && fly deploy`, see [frontend](frontend/README.md#deploy)) |
+| Workspace frontend | Deployed on [Vercel](https://vercel.com) — setup in [frontend/README.md](frontend/README.md#vercel) |
 
-Hosted on [Fly.io](https://fly.io) in Johannesburg (`jnb`). See [deploy/fly](deploy/fly/README.md).
+The API runs on [Fly.io](https://fly.io) in Johannesburg (`jnb`), see [deploy/fly](deploy/fly/README.md); the frontend runs on Vercel with its functions in Cape Town (`cpt1`).
 
 ---
 
@@ -39,7 +39,7 @@ Hosted on [Fly.io](https://fly.io) in Johannesburg (`jnb`). See [deploy/fly](dep
 | Data | ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-4169E1?logo=postgresql&logoColor=white) ![Neo4j](https://img.shields.io/badge/Neo4j-5-4581C3?logo=neo4j&logoColor=white) ![Redis](https://img.shields.io/badge/Redis-7-DC382D?logo=redis&logoColor=white) ![S3](https://img.shields.io/badge/S3_object_storage-569A31) |
 | AI | ![Anthropic](https://img.shields.io/badge/Anthropic_Claude-191919?logo=anthropic&logoColor=white) (bring-your-own-AI, offline fallback) |
 | Observability | ![OpenTelemetry](https://img.shields.io/badge/OpenTelemetry-425CC7?logo=opentelemetry&logoColor=white) ![Prometheus](https://img.shields.io/badge/Prometheus-E6522C?logo=prometheus&logoColor=white) ![Grafana](https://img.shields.io/badge/Grafana-F46800?logo=grafana&logoColor=white) ![Jaeger](https://img.shields.io/badge/Jaeger-66CFE3) |
-| Runtime & edge | ![Docker](https://img.shields.io/badge/Docker-2496ED?logo=docker&logoColor=white) ![Traefik](https://img.shields.io/badge/Traefik-24A1C1?logo=traefikproxy&logoColor=white) ![Fly.io](https://img.shields.io/badge/Fly.io-24175B?logo=flydotio&logoColor=white) |
+| Runtime & edge | ![Docker](https://img.shields.io/badge/Docker-2496ED?logo=docker&logoColor=white) ![Traefik](https://img.shields.io/badge/Traefik-24A1C1?logo=traefikproxy&logoColor=white) ![Fly.io](https://img.shields.io/badge/Fly.io-24175B?logo=flydotio&logoColor=white) ![Vercel](https://img.shields.io/badge/Vercel-000000?logo=vercel&logoColor=white) |
 | Cloud (AWS path) | ![Kubernetes](https://img.shields.io/badge/EKS_/_Kubernetes-326CE5?logo=kubernetes&logoColor=white) ![Helm](https://img.shields.io/badge/Helm-0F1689?logo=helm&logoColor=white) ![Terraform](https://img.shields.io/badge/Terraform-844FBA?logo=terraform&logoColor=white) ![AWS](https://img.shields.io/badge/AWS-FF9900) |
 | CI/CD & security | ![GitHub Actions](https://img.shields.io/badge/GitHub_Actions-2088FF?logo=githubactions&logoColor=white) ![Ruff](https://img.shields.io/badge/Ruff-D7FF64?logo=ruff&logoColor=black) ![Trivy](https://img.shields.io/badge/Trivy-1904DA?logo=aqua&logoColor=white) ![Semgrep](https://img.shields.io/badge/Semgrep-2C2C2C) ![Gitleaks](https://img.shields.io/badge/Gitleaks-CB2026) |
 
@@ -162,7 +162,7 @@ All host ports bind to `127.0.0.1` (set `FINSIGHT_BIND_ADDR=0.0.0.0` in `.env` t
 ### 2. Fly.io — live
 
 Every service is its own Fly app on Fly's private, WireGuard-encrypted network. Only the
-gateway, the console and the frontend are public. Redpanda, Neo4j and Redis run as private apps with
+gateway and the console are public (the frontend is on Vercel). Redpanda, Neo4j and Redis run as private apps with
 volumes; PostgreSQL is Fly Postgres with **one database and one user per service**; raw files
 go to a Tigris bucket. Provisioning, secrets and deploys are scripted:
 [deploy/fly/README.md](deploy/fly/README.md).

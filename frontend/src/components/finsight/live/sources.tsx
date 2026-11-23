@@ -38,10 +38,10 @@ const SOURCES = [
     ["pdf", "PDF statement"],
     ["other", "Other"],
 ] as const;
-const MAX_BYTES = 50 * 1024 * 1024;
+const formatMB = (bytes: number) => `${Math.round((bytes / (1024 * 1024)) * 10) / 10} MB`;
 
 export function LiveSources() {
-    const { user } = useSession();
+    const { user, maxUploadBytes } = useSession();
     const queryClient = useQueryClient();
     const input = useRef<HTMLInputElement>(null);
     const [source, setSource] = useState<string>("bank");
@@ -85,7 +85,8 @@ export function LiveSources() {
         if (!file) return;
         if (!uploadContentType(file))
             return setError("Upload CSV, JSON, Excel (.xlsx/.xls), PDF or text files.");
-        if (file.size > MAX_BYTES) return setError("Files are limited to 50 MB.");
+        if (file.size > maxUploadBytes)
+            return setError(`Files are limited to ${formatMB(maxUploadBytes)} here.`);
         upload.mutate(file);
         if (input.current) input.current.value = "";
     }
@@ -96,7 +97,7 @@ export function LiveSources() {
     return (
         <Page
             title="Sources & uploads"
-            subtitle="CSV · JSON · Excel · PDF · up to 50 MB"
+            subtitle={`CSV · JSON · Excel · PDF · up to ${formatMB(maxUploadBytes)}`}
             actions={<SourceBadge live />}
         >
             <Metrics

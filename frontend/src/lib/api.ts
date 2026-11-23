@@ -58,7 +58,7 @@ const post = <T>(path: string, body: unknown) =>
 // ---- session ---------------------------------------------------------------------------
 
 export type Session =
-    | { authenticated: false; apiUrl: string }
+    | { authenticated: false; apiUrl: string; maxUploadBytes?: number }
     | {
           authenticated: true;
           clientId: string;
@@ -66,6 +66,7 @@ export type Session =
           scopes: string[];
           expiresAt: string;
           apiUrl: string;
+          maxUploadBytes?: number;
       };
 
 // ---- shapes ----------------------------------------------------------------------------

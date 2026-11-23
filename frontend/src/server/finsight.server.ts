@@ -13,7 +13,17 @@ export const SESSION_COOKIE = "fs_session";
  * set it, and without CORS a cross-site fetch can't either (CSRF defence in depth on top
  * of SameSite=Strict). */
 export const CLIENT_HEADER = "x-finsight-client";
-export const MAX_BODY_BYTES = 50 * 1024 * 1024; // matches ingestion-service's upload limit
+/** Largest request body the proxy accepts. ingestion-service takes up to 50 MB, but Vercel
+ * Functions cap request bodies at 4.5 MB, so the default follows the platform.
+ * FINSIGHT_MAX_UPLOAD_BYTES overrides it. */
+export function maxUploadBytes(env: Record<string, string | undefined> = runtimeEnvRaw()): number {
+    const configured = Number(env["FINSIGHT_MAX_UPLOAD_BYTES"]);
+    if (Number.isFinite(configured) && configured > 0) return configured;
+    return env["VERCEL"] ? 4.5 * 1024 * 1024 : 50 * 1024 * 1024;
+}
+const runtimeEnvRaw = (): Record<string, string | undefined> =>
+    (globalThis as { process?: { env: Record<string, string | undefined> } }).process?.env ?? {};
+const formatMB = (bytes: number) => `${Math.round((bytes / (1024 * 1024)) * 10) / 10} MB`;
 const UPSTREAM_TIMEOUT_MS = 30_000;
 
 type Env = Record<string, string | undefined>;
@@ -135,7 +145,7 @@ function json(
 export function getSession(request: Request): Response {
     const token = readCookie(request, SESSION_COOKIE);
     const session = token ? sessionFromToken(token) : null;
-    const base = { apiUrl: publicApiUrl() };
+    const base = { apiUrl: publicApiUrl(), maxUploadBytes: maxUploadBytes() };
     if (!session)
         return json(
             { authenticated: false, ...base },
@@ -194,7 +204,7 @@ export async function login(request: Request, fetchImpl: typeof fetch = fetch): 
     if (!token.access_token || !session)
         return problem(502, "Bad Gateway", "unexpected token response");
     return json(
-        { ...session, apiUrl: publicApiUrl() },
+        { ...session, apiUrl: publicApiUrl(), maxUploadBytes: maxUploadBytes() },
         {},
         { "set-cookie": sessionCookie(request, token.access_token, token.expires_in ?? 3600) },
     );
@@ -230,9 +240,10 @@ export async function proxy(
     if (!/^[\w\-./]+$/.test(path) || path.split("/").includes(".."))
         return problem(400, "Bad Request", "invalid path");
 
+    const limit = maxUploadBytes();
     const length = Number(request.headers.get("content-length") ?? "0");
-    if (length > MAX_BODY_BYTES)
-        return problem(413, "Payload Too Large", "uploads are limited to 50 MB");
+    if (length > limit)
+        return problem(413, "Payload Too Large", `uploads are limited to ${formatMB(limit)}`);
 
     const headers = new Headers({ authorization: `Bearer ${token}` });
     for (const name of FORWARDED_REQUEST_HEADERS) {
@@ -241,8 +252,8 @@ export async function proxy(
     }
     const hasBody = !["GET", "HEAD"].includes(request.method);
     const body = hasBody ? await request.arrayBuffer() : undefined;
-    if (body && body.byteLength > MAX_BODY_BYTES)
-        return problem(413, "Payload Too Large", "uploads are limited to 50 MB");
+    if (body && body.byteLength > limit)
+        return problem(413, "Payload Too Large", `uploads are limited to ${formatMB(limit)}`);
 
     const target = `${apiBaseUrl()}/v1/${path}${new URL(request.url).search}`;
     let upstream: Response;

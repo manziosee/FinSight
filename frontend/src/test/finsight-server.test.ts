@@ -163,3 +163,26 @@ describe("getSession", () => {
         expect(res.headers.get("set-cookie")).toMatch(/Max-Age=0/);
     });
 });
+
+describe("upload limit", () => {
+    it("follows the platform: 4.5 MB on Vercel, 50 MB elsewhere", async () => {
+        const { maxUploadBytes } = await import("@/server/finsight.server");
+        expect(maxUploadBytes({ VERCEL: "1" })).toBe(4.5 * 1024 * 1024);
+        expect(maxUploadBytes({})).toBe(50 * 1024 * 1024);
+        expect(maxUploadBytes({ VERCEL: "1", FINSIGHT_MAX_UPLOAD_BYTES: "1048576" })).toBe(1048576);
+    });
+    it("rejects an oversized body before calling the gateway", async () => {
+        vi.stubGlobal("process", {
+            env: { FINSIGHT_API_URL: "http://gateway:8000", FINSIGHT_MAX_UPLOAD_BYTES: "10" },
+        });
+        const fetchImpl = vi.fn();
+        const req = new Request("http://app/api/v1/data/upload", {
+            method: "POST",
+            headers: { ...web, cookie: `${SESSION_COOKIE}=${valid}` },
+            body: "x".repeat(100),
+        });
+        const res = await proxy(req, "data/upload", fetchImpl as unknown as typeof fetch);
+        expect(res.status).toBe(413);
+        expect(fetchImpl).not.toHaveBeenCalled();
+    });
+});

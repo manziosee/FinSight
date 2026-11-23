@@ -5,6 +5,13 @@ import { tanstackStart } from "@tanstack/react-start/plugin/vite";
 import { nitro } from "nitro/vite";
 import viteReact from "@vitejs/plugin-react";
 
+const env =
+    (globalThis as { process?: { env: Record<string, string | undefined> } }).process?.env ?? {};
+// Vercel sets VERCEL=1 during its builds: produce Vercel Functions (.vercel/output). Everywhere
+// else build a plain Node server (`node .output/server/index.mjs`) for Docker and compose.
+// NITRO_PRESET overrides both.
+const nitroPreset = env["NITRO_PRESET"] ?? (env["VERCEL"] ? "vercel" : "node-server");
+
 export default defineConfig({
     server: { host: "::", port: 3500, strictPort: true },
     resolve: {
@@ -29,8 +36,7 @@ export default defineConfig({
                 client: { files: ["**/server/**"], specifiers: ["server-only"] },
             },
         }),
-        // A plain Node server (`node .output/server/index.mjs`) for Docker, compose and Fly.
-        nitro({ preset: "node-server" }),
+        nitro({ preset: nitroPreset }),
         viteReact(),
     ],
 });
