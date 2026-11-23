@@ -30,6 +30,7 @@ services:
   # ---------------- infrastructure ----------------
   postgres:
     image: postgres:16-alpine
+    restart: unless-stopped
     environment:
       POSTGRES_USER: finsight
       POSTGRES_PASSWORD: finsight_local_pw
@@ -47,6 +48,7 @@ services:
 
   neo4j:
     image: neo4j:5.22-community
+    restart: unless-stopped
     environment:
       NEO4J_AUTH: neo4j/finsight_local_pw
       NEO4J_PLUGINS: '["apoc"]'
@@ -61,6 +63,7 @@ services:
 
   redis:
     image: redis:7-alpine
+    restart: unless-stopped
     command:
       - redis-server
       - --save
@@ -81,6 +84,7 @@ services:
 
   redpanda:
     image: redpandadata/redpanda:v24.2.4
+    restart: unless-stopped
     command:
       - redpanda start
       - --smp 1
@@ -98,6 +102,7 @@ services:
 
   redpanda-console:
     image: redpandadata/console:v2.7.2
+    restart: unless-stopped
     environment:
       KAFKA_BROKERS: redpanda:9092
     ports: ["${FINSIGHT_BIND_ADDR:-127.0.0.1}:18082:8080"]
@@ -110,6 +115,7 @@ services:
   # identities file; ingestion-service creates the bucket on startup.
   s3:
     image: chrislusf/seaweedfs:3.97@sha256:bb05d66d2963b1cc48073190781c3dd29e2c4c88a2ae2986bf58e38c86d89c6e
+    restart: unless-stopped
     command: ["server", "-dir=/data", "-s3", "-s3.port=8333", "-s3.config=/etc/seaweedfs/s3.json"]
     volumes:
       - s3data:/data
@@ -127,6 +133,7 @@ services:
   # ---------------- observability ----------------
   otel-collector:
     image: otel/opentelemetry-collector-contrib:0.108.0
+    restart: unless-stopped
     command: ["--config=/etc/otelcol/config.yaml"]
     volumes:
       - ./infra/observability/otel-collector.yaml:/etc/otelcol/config.yaml:ro
@@ -137,6 +144,7 @@ services:
 
   jaeger:
     image: jaegertracing/all-in-one:1.60
+    restart: unless-stopped
     environment:
       COLLECTOR_OTLP_ENABLED: "true"
     ports: ["${FINSIGHT_BIND_ADDR:-127.0.0.1}:16686:16686"]
@@ -144,6 +152,7 @@ services:
 
   prometheus:
     image: prom/prometheus:v2.54.1
+    restart: unless-stopped
     volumes:
       - ./infra/observability/prometheus.yml:/etc/prometheus/prometheus.yml:ro
     expose: ["9090"]
@@ -151,6 +160,7 @@ services:
 
   grafana:
     image: grafana/grafana:11.2.0
+    restart: unless-stopped
     environment:
       GF_SECURITY_ADMIN_USER: admin
       GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:?GRAFANA_ADMIN_PASSWORD is unset - run make bootstrap}
@@ -167,6 +177,7 @@ services:
   # ---------------- edge ----------------
   traefik:
     image: traefik:v3.1
+    restart: unless-stopped
     command:
       - --providers.file.directory=/etc/traefik/dynamic
       - --entrypoints.web.address=:80
@@ -180,6 +191,7 @@ services:
 
   swagger-ui:
     image: swaggerapi/swagger-ui:v5.17.14
+    restart: unless-stopped
     environment:
       URLS: '[{"url":"/openapi/finsight.openapi.json","name":"FinSight API (aggregated)"}]'
     volumes:
