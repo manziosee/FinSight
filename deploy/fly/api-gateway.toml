@@ -26,10 +26,12 @@ primary_region = "jnb"
   FINSIGHT_NORMALIZATION_URL = "http://finsight-normalization-service.internal:8000"
   FINSIGHT_GRAPH_URL = "http://finsight-graph-service.internal:8000"
   FINSIGHT_RECONCILIATION_URL = "http://finsight-reconciliation-service.internal:8000"
-  FINSIGHT_INTELLIGENCE_URL = "http://finsight-intelligence-service.internal:8000"
-  FINSIGHT_ANOMALY_URL = "http://finsight-anomaly-service.internal:8000"
-  FINSIGHT_FORECAST_URL = "http://finsight-forecast-service.internal:8000"
-  FINSIGHT_ACTION_URL = "http://finsight-action-service.internal:8000"
+  # These four scale to zero when idle. Flycast goes through Fly's proxy, which wakes a
+  # suspended machine; direct *.internal traffic would not (the gateway would get 502).
+  FINSIGHT_INTELLIGENCE_URL = "http://finsight-intelligence-service.flycast"
+  FINSIGHT_ANOMALY_URL = "http://finsight-anomaly-service.flycast"
+  FINSIGHT_FORECAST_URL = "http://finsight-forecast-service.flycast"
+  FINSIGHT_ACTION_URL = "http://finsight-action-service.flycast"
   FINSIGHT_JWKS_URL = "http://finsight-identity-service.internal:8000/.well-known/jwks.json"
 
 [http_service]

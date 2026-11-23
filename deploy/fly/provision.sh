@@ -34,6 +34,12 @@ ensure_volume() {  # app volume size_gb
 ensure_volume finsight-redpanda redpanda_data 5
 ensure_volume finsight-neo4j neo4j_data 3
 
+echo ">> flycast (private proxy) addresses for the scale-to-zero services"
+for name in intelligence-service anomaly-service forecast-service action-service; do
+  if fly ips list -a "finsight-$name" 2>/dev/null | grep -q "private"; then echo "  finsight-$name has one"
+  else fly ips allocate-v6 --private -a "finsight-$name" >/dev/null && echo "  allocated for finsight-$name"; fi
+done
+
 echo ">> postgres ($PG_APP)"
 if app_exists "$PG_APP"; then echo "  $PG_APP exists"
 else
