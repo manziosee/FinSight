@@ -164,6 +164,15 @@ jobs:
     needs: [build-images]
     steps:
       - uses: actions/checkout@v7
+      # The stack builds ~11 images; the runner's ~14 GB free disk isn't enough on its own.
+      # Drop preinstalled toolchains FinSight never uses (Android, .NET, Haskell, CodeQL).
+      - name: Free disk space
+        run: |
+          df -h /
+          sudo rm -rf /usr/local/lib/android /usr/share/dotnet /opt/ghc /usr/local/.ghcup \
+            /opt/hostedtoolcache/CodeQL /usr/local/share/boost
+          docker system prune -af
+          df -h /
       - name: Bootstrap env
         run: ./scripts/bootstrap.sh
       - name: Start stack

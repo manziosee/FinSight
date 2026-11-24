@@ -319,7 +319,10 @@ services:
       action-service: {condition: service_healthy}
     ports: ["${FINSIGHT_BIND_ADDR:-127.0.0.1}:18000:8000"]
 
+  # Legacy Next.js console, superseded by ./frontend. Opt-in only, so the default stack
+  # (and CI) doesn't build it: docker compose --profile legacy up -d console
   console:
+    profiles: [legacy]
     build:
       context: ./console
       dockerfile: Dockerfile

@@ -22,7 +22,7 @@ multi-format, multi-currency** real-world financial data extremely well.
 | Interactive API docs | https://finsight-api-gateway.fly.dev/docs |
 | OpenAPI spec | https://finsight-api-gateway.fly.dev/openapi.json |
 | Console (reference UI) | https://finsight-console.fly.dev |
-| Workspace frontend | Deployed on [Vercel](https://vercel.com) — setup in [frontend/README.md](frontend/README.md#vercel) |
+| Workspace frontend | https://finsight-hq.vercel.app (Vercel — setup in [frontend/README.md](frontend/README.md#vercel)) |
 
 The API runs on [Fly.io](https://fly.io) in Johannesburg (`jnb`), see [deploy/fly](deploy/fly/README.md); the frontend runs on Vercel with its functions in Cape Town (`cpt1`).
 
@@ -150,7 +150,7 @@ All host ports bind to `127.0.0.1` (set `FINSIGHT_BIND_ADDR=0.0.0.0` in `.env` t
 | URL | What |
 |---|---|
 | http://localhost:3400 | **Workspace frontend** — sign in with `demo-client` / `demo-secret` |
-| http://localhost:3300 | Console (minimal reference UI) |
+| http://localhost:3300 | Legacy console, opt-in: `docker compose --profile legacy up -d console` |
 | http://localhost:8088/docs | Unified FinSight API (Traefik → gateway) |
 | http://localhost:18000/docs | Gateway directly (bypasses Traefik) |
 | http://localhost:18081 | Swagger UI for the committed aggregated spec |

@@ -95,6 +95,8 @@ bun run build         # production build → .output/server/index.mjs (Node)
 
 ### Vercel
 
+Live at **https://finsight-hq.vercel.app**.
+
 The build detects Vercel (it sets `VERCEL=1`) and produces Vercel Functions instead of a Node
 server: static assets go to Vercel's CDN, and one Node function serves pages and the `/api/*`
 session and proxy routes. [vercel.json](vercel.json) sets the Bun install/build commands,
