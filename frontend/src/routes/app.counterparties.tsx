@@ -21,6 +21,7 @@ import {
     Empty,
     pageHead,
     cell,
+    SourceBadge,
 } from "@/components/finsight/page-kit";
 import { totalsByCurrency, type Currency } from "@/lib/money";
 import { displayProjection } from "@/lib/currency-display";
@@ -33,7 +34,7 @@ export const Route = createFileRoute("/app/counterparties")({
         ),
     component: CounterpartiesPage,
 });
-function SampleCounterparties() {
+function SampleCounterparties({ embedded = false }: { embedded?: boolean }) {
     const { records, money, settings } = useWorkspace();
     const [q, setQ] = useState("");
     const [selected, setSelected] = useState<string | null>(null);
@@ -54,7 +55,16 @@ function SampleCounterparties() {
     );
     return (
         <Page
-            title="Counterparties"
+            level={embedded ? 2 : 1}
+            title={
+                embedded ? (
+                    <>
+                        Example directory <SourceBadge live={false} />
+                    </>
+                ) : (
+                    "Counterparties"
+                )
+            }
             subtitle="Customer & vendor activity · sample records"
             actions={
                 <Button
@@ -172,5 +182,14 @@ function SampleCounterparties() {
 
 function CounterpartiesPage() {
     const { isLive } = useSession();
-    return isLive ? <LiveCounterparties /> : <SampleCounterparties />;
+    return isLive ? (
+        <div className="space-y-10">
+            <LiveCounterparties />
+            <div className="mx-auto max-w-7xl border-t pt-8">
+                <SampleCounterparties embedded />
+            </div>
+        </div>
+    ) : (
+        <SampleCounterparties />
+    );
 }

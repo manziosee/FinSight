@@ -3,6 +3,36 @@ import { useSession } from "@/components/finsight/session";
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { FileSpreadsheet } from "lucide-react";
+import { RowActions } from "@/components/finsight/row-actions";
+import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from "@/components/ui/dialog";
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select";
+import { SourceBadge } from "@/components/finsight/page-kit";
+import { formatPeriod, inPeriod } from "@/lib/period";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Input } from "@/components/ui/input";
 import { type Status, type Txn } from "@/lib/demo-data";
@@ -18,23 +48,34 @@ export const Route = createFileRoute("/app/transactions")({
     component: TransactionsPage,
 });
 
-function SampleTransactions() {
-    const { records: transactions, money, total, settings } = useWorkspace();
+export function SampleTransactions({ embedded = false }: { embedded?: boolean }) {
+    const {
+        records: transactions,
+        setRecords,
+        log,
+        money,
+        total,
+        settings,
+        period,
+    } = useWorkspace();
     const [q, setQ] = useState("");
     const [status, setStatus] = useState<Status | "all">("all");
     const [sel, setSel] = useState<Txn | null>(null);
+    const [editing, setEditing] = useState<Txn | null>(null);
+    const [deleting, setDeleting] = useState<Txn | null>(null);
 
     const rows = useMemo(
         () =>
             transactions.filter(
                 (t) =>
+                    inPeriod(t.date, period) &&
                     (status === "all" || t.status === status) &&
                     (q === "" ||
                         `${t.counterparty} ${t.reference} ${t.source}`
                             .toLowerCase()
                             .includes(q.toLowerCase())),
             ),
-        [q, status, transactions],
+        [q, status, transactions, period],
     );
     const totals = totalsByCurrency(rows);
 
@@ -42,9 +83,16 @@ function SampleTransactions() {
         <div className="mx-auto max-w-7xl space-y-4">
             <div className="flex flex-wrap items-end justify-between gap-3">
                 <div>
-                    <h1 className="text-2xl font-semibold tracking-tight">Transactions</h1>
+                    {embedded ? (
+                        <h2 className="flex items-center gap-2 text-lg font-semibold">
+                            Example records <SourceBadge live={false} />
+                        </h2>
+                    ) : (
+                        <h1 className="text-2xl font-semibold tracking-tight">Transactions</h1>
+                    )}
                     <p className="text-sm text-muted-foreground">
-                        {rows.length} records · converted display · originals in record details
+                        {rows.length} records · {formatPeriod(period)}
+                        {embedded ? " · sample data to explore; your files live on Sources" : ""}
                     </p>
                 </div>
                 <div className="flex gap-4 text-sm">
@@ -85,6 +133,7 @@ function SampleTransactions() {
                                 "Amount",
                                 "Confidence",
                                 "Status",
+                                "",
                             ].map((h) => (
                                 <th
                                     key={h}
@@ -103,7 +152,7 @@ function SampleTransactions() {
                             <tr
                                 key={t.id}
                                 onClick={() => setSel(t)}
-                                className="cursor-pointer hover:bg-muted/50"
+                                className="group cursor-pointer transition-colors hover:bg-muted/50"
                             >
                                 <td className="num px-3 py-2 text-muted-foreground">
                                     {t.date.split("-").reverse().join("/")}
@@ -125,13 +174,21 @@ function SampleTransactions() {
                                 <td className="px-3 py-2">
                                     <StatusBadge status={t.status} />
                                 </td>
+                                <td className="px-2 py-1 text-right">
+                                    <RowActions
+                                        onView={() => setSel(t)}
+                                        onEdit={() => setEditing(t)}
+                                        onDelete={() => setDeleting(t)}
+                                    />
+                                </td>
                             </tr>
                         ))}
                     </tbody>
                 </table>
                 {rows.length === 0 && (
                     <p className="p-8 text-center text-sm text-muted-foreground">
-                        No records match. Try clearing filters or upload a new source.
+                        No records match. Try a wider date range, clear the filters, or upload a new
+                        source.
                     </p>
                 )}
             </div>
@@ -206,11 +263,171 @@ function SampleTransactions() {
                     )}
                 </SheetContent>
             </Sheet>
+            <EditRecordDialog
+                record={editing}
+                onClose={() => setEditing(null)}
+                onSave={(next) => {
+                    setRecords((xs) => xs.map((x) => (x.id === next.id ? next : x)));
+                    log("Record edited", next.id, `${next.counterparty} · ${next.reference}`);
+                    toast.success("Record updated");
+                    setEditing(null);
+                }}
+            />
+            <AlertDialog open={!!deleting} onOpenChange={(o) => !o && setDeleting(null)}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Delete this record?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            {deleting
+                                ? `${deleting.counterparty} · ${deleting.reference} will be removed from this workspace.`
+                                : ""}
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel>Keep it</AlertDialogCancel>
+                        <AlertDialogAction
+                            className="bg-danger text-white hover:bg-danger/90"
+                            onClick={() => {
+                                if (!deleting) return;
+                                const removed = deleting;
+                                setRecords((xs) => xs.filter((x) => x.id !== removed.id));
+                                log("Record deleted", removed.id, removed.counterparty);
+                                setDeleting(null);
+                                toast("Record deleted", {
+                                    action: {
+                                        label: "Undo",
+                                        onClick: () => setRecords((xs) => [removed, ...xs]),
+                                    },
+                                });
+                            }}
+                        >
+                            Delete
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
         </div>
+    );
+}
+
+function EditRecordDialog({
+    record,
+    onClose,
+    onSave,
+}: {
+    record: Txn | null;
+    onClose: () => void;
+    onSave: (next: Txn) => void;
+}) {
+    const [draft, setDraft] = useState<Txn | null>(record);
+    const [prevId, setPrevId] = useState<string | null>(null);
+    if ((record?.id ?? null) !== prevId) {
+        setPrevId(record?.id ?? null);
+        setDraft(record);
+    }
+    const amountOk = draft ? Number.isFinite(draft.amount) && draft.amount !== 0 : false;
+    const valid = !!draft && draft.counterparty.trim() !== "" && amountOk;
+    return (
+        <Dialog open={!!record} onOpenChange={(o) => !o && onClose()}>
+            <DialogContent>
+                <DialogHeader>
+                    <DialogTitle>Edit record</DialogTitle>
+                    <DialogDescription>{record?.id}</DialogDescription>
+                </DialogHeader>
+                {draft && (
+                    <form
+                        id="edit-record"
+                        className="grid gap-3 sm:grid-cols-2"
+                        onSubmit={(e) => {
+                            e.preventDefault();
+                            if (valid)
+                                onSave({ ...draft, counterparty: draft.counterparty.trim() });
+                        }}
+                    >
+                        <label className="text-sm sm:col-span-2">
+                            Counterparty
+                            <Input
+                                className="mt-1"
+                                value={draft.counterparty}
+                                maxLength={80}
+                                onChange={(e) =>
+                                    setDraft({ ...draft, counterparty: e.target.value })
+                                }
+                            />
+                        </label>
+                        <label className="text-sm">
+                            Reference
+                            <Input
+                                className="mt-1"
+                                value={draft.reference}
+                                maxLength={40}
+                                onChange={(e) => setDraft({ ...draft, reference: e.target.value })}
+                            />
+                        </label>
+                        <label className="text-sm">
+                            Date
+                            <Input
+                                className="mt-1"
+                                type="date"
+                                value={draft.date}
+                                onChange={(e) =>
+                                    e.target.value && setDraft({ ...draft, date: e.target.value })
+                                }
+                            />
+                        </label>
+                        <label className="text-sm">
+                            Amount ({draft.currency})
+                            <Input
+                                className="mt-1"
+                                type="number"
+                                step="0.01"
+                                value={Number.isFinite(draft.amount) ? draft.amount : ""}
+                                onChange={(e) =>
+                                    setDraft({ ...draft, amount: e.target.valueAsNumber })
+                                }
+                            />
+                        </label>
+                        <label className="text-sm">
+                            Status
+                            <Select
+                                value={draft.status}
+                                onValueChange={(v) => setDraft({ ...draft, status: v as Status })}
+                            >
+                                <SelectTrigger className="mt-1 w-full">
+                                    <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="matched">Matched</SelectItem>
+                                    <SelectItem value="review">Needs review</SelectItem>
+                                    <SelectItem value="exception">Exception</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </label>
+                    </form>
+                )}
+                <DialogFooter>
+                    <Button variant="ghost" onClick={onClose}>
+                        Cancel
+                    </Button>
+                    <Button type="submit" form="edit-record" disabled={!valid}>
+                        Save changes
+                    </Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
     );
 }
 
 function TransactionsPage() {
     const { isLive } = useSession();
-    return isLive ? <LiveTransactions /> : <SampleTransactions />;
+    return isLive ? (
+        <div className="space-y-10">
+            <LiveTransactions />
+            <div className="mx-auto max-w-7xl border-t pt-8">
+                <SampleTransactions embedded />
+            </div>
+        </div>
+    ) : (
+        <SampleTransactions />
+    );
 }

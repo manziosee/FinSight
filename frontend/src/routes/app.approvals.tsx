@@ -62,7 +62,7 @@ function SampleApprovals() {
             </div>
             <div className="space-y-4">
                 {visible.map((a) => (
-                    <article key={a.id} className="rounded-lg border bg-card p-5">
+                    <article key={a.id} className="lift rounded-lg border bg-card p-5">
                         <div className="flex flex-wrap justify-between gap-3">
                             <div>
                                 <h2 className="font-medium">{a.counterparty}</h2>

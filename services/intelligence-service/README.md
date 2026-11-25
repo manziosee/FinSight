@@ -10,7 +10,7 @@ Bring-your-own-AI ([llm.py](src/intelligence_service/llm.py)), chosen with `FINS
 | Provider | Needs | Default model |
 |---|---|---|
 | `anthropic` (default) | `ANTHROPIC_API_KEY` | `claude-opus-5-5` |
-| `groq` | `GROQ_API_KEY` | `llama-3.3-70b-versatile` |
+| `groq` | `GROQ_API_KEY` | `openai/gpt-oss-120b` |
 | `openrouter` | `OPENROUTER_API_KEY` | `meta-llama/llama-3.3-70b-instruct` |
 | `ollama` | a reachable Ollama server (`OLLAMA_BASE_URL`, default `http://localhost:11434/v1`) | `llama3.1` |
 | `openai` | `OPENAI_API_KEY` (any OpenAI-compatible API via `FINSIGHT_LLM_BASE_URL`) | `gpt-4o-mini` |

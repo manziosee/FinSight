@@ -1,4 +1,6 @@
 import { render, screen, cleanup, waitFor } from "@testing-library/react";
+import { WorkspaceProvider } from "@/components/finsight/workspace-context";
+import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
     createMemoryHistory,
@@ -132,7 +134,11 @@ function renderLive(Component: ComponentType) {
         component: () => (
             <QueryClientProvider client={queryClient}>
                 <SessionProvider>
-                    <Component />
+                    <WorkspaceProvider>
+                        <TooltipProvider>
+                            <Component />
+                        </TooltipProvider>
+                    </WorkspaceProvider>
                 </SessionProvider>
             </QueryClientProvider>
         ),
@@ -158,7 +164,7 @@ describe("live pages render API data", () => {
         ["reports", LiveReports, /no payment found/],
         ["audit", LiveAudit, /POST \/v1\/reconciliation\/run/],
         ["developers", LiveDevelopers, /Create an API key/],
-        ["settings", LiveSettings, /tenant_demo/],
+        ["settings", LiveSettings, /Demo workspace/],
     ])("%s", async (_name, Component, text) => {
         renderLive(Component);
         await waitFor(() => expect(screen.getAllByText(text).length).toBeGreaterThan(0));

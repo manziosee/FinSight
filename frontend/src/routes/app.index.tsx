@@ -17,6 +17,7 @@ import { useSession } from "@/components/finsight/session";
 import { attention, trend } from "@/lib/demo-data";
 import { StatusBadge } from "@/components/finsight/status";
 import { pageHead } from "@/components/finsight/page-kit";
+import { formatPeriod } from "@/lib/period";
 
 export const Route = createFileRoute("/app/")({
     head: () => pageHead("Home", "Cash position, match rate and what needs your attention."),
@@ -24,7 +25,7 @@ export const Route = createFileRoute("/app/")({
 });
 
 function SampleDashboard() {
-    const { money, settings, convert } = useWorkspace();
+    const { money, settings, convert, period } = useWorkspace();
     const { user } = useSession();
     const kpis = [
         { l: "Cash position", v: [money(184250000, "RWF"), money(42310.75, "USD")] },
@@ -45,12 +46,14 @@ function SampleDashboard() {
                 <h1 className="text-2xl font-semibold tracking-tight">
                     Welcome, {user?.name ?? "guest"}
                 </h1>
-                <p className="text-sm text-muted-foreground">October 2026 · fiscal year Jul–Jun</p>
+                <p className="text-sm text-muted-foreground">
+                    {formatPeriod(period)} · fiscal year Jul–Jun
+                </p>
             </div>
 
             <div className="grid grid-cols-2 gap-3 lg:grid-cols-6">
                 {kpis.map((k) => (
-                    <div key={k.l} className="rounded-lg border bg-card p-4">
+                    <div key={k.l} className="lift rounded-lg border bg-card p-4">
                         <p className="text-xs text-muted-foreground">{k.l}</p>
                         {k.v.map((v) => (
                             <p
@@ -174,7 +177,7 @@ function SampleDashboard() {
 
 function ChartCard({ title, children }: { title: string; children: React.ReactElement }) {
     return (
-        <div className="rounded-lg border bg-card p-4">
+        <div className="lift rounded-lg border bg-card p-4">
             <h2 className="text-sm font-medium">{title}</h2>
             <div className="mt-3 h-56">
                 <ResponsiveContainer>{children}</ResponsiveContainer>

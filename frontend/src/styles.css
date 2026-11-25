@@ -193,3 +193,22 @@
     background-size: 48px 48px;
     mask-image: radial-gradient(ellipse at center, black 30%, transparent 75%);
 }
+
+/* Gentle hover lift for cards and tiles. */
+@utility lift {
+    transition:
+        transform 200ms ease,
+        box-shadow 200ms ease,
+        border-color 200ms ease;
+    &:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 24px -12px color-mix(in oklab, var(--foreground) 25%, transparent);
+        border-color: color-mix(in oklab, var(--primary) 35%, var(--border));
+    }
+    @media (prefers-reduced-motion: reduce) {
+        transition: none;
+        &:hover {
+            transform: none;
+        }
+    }
+}

@@ -4,7 +4,7 @@ import { Sparkles, Send, ArrowUpRight, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { api, type Answer } from "@/lib/api";
-import { ErrorLine, Page, Pill, SourceBadge } from "@/components/finsight/page-kit";
+import { ErrorLine, Page, Pill, RichAnswer } from "@/components/finsight/page-kit";
 import { pct } from "./common";
 
 const SUGGESTIONS = [
@@ -33,7 +33,6 @@ export function LiveAsk() {
             subtitle="Answers grounded in your latest reconciliation — figures come from your data, never invented"
             actions={
                 <>
-                    <SourceBadge live />
                     <Button
                         variant="ghost"
                         disabled={!messages.length}
@@ -50,7 +49,12 @@ export function LiveAsk() {
                     <h2 className="text-xl font-medium">Ask about your money</h2>
                     <div className="mt-6 flex flex-wrap gap-2">
                         {SUGGESTIONS.map((s) => (
-                            <Button key={s} variant="outline" onClick={() => send(s)}>
+                            <Button
+                                key={s}
+                                variant="outline"
+                                className="hover:-translate-y-0.5 hover:border-primary/50 hover:shadow-sm"
+                                onClick={() => send(s)}
+                            >
                                 {s}
                                 <ArrowUpRight />
                             </Button>
@@ -60,7 +64,10 @@ export function LiveAsk() {
             )}
             <div className="space-y-7">
                 {messages.map((m, i) => (
-                    <section key={i} className="border-b pb-6">
+                    <section
+                        key={i}
+                        className="animate-in fade-in-0 slide-in-from-bottom-2 border-b pb-6 duration-300"
+                    >
                         <p className="mb-4 font-medium">{m.question}</p>
                         <div className="flex gap-3">
                             <Sparkles className="mt-1 size-5 shrink-0 text-primary" />
@@ -73,12 +80,10 @@ export function LiveAsk() {
                                     </Pill>
                                     <Pill>confidence {pct(m.answer.confidence)}</Pill>
                                 </div>
-                                <p className="max-w-3xl whitespace-pre-line text-sm leading-relaxed">
-                                    {m.answer.answer}
-                                </p>
+                                <RichAnswer className="max-w-3xl" text={m.answer.answer} />
                                 <details className="text-xs text-muted-foreground">
-                                    <summary className="cursor-pointer">
-                                        Evidence used (PII redacted)
+                                    <summary className="cursor-pointer transition-colors hover:text-foreground">
+                                        Figures used
                                     </summary>
                                     <pre className="mt-2 max-h-72 overflow-auto rounded-md bg-muted p-3">
                                         {JSON.stringify(m.answer.evidence, null, 2)}
@@ -89,6 +94,22 @@ export function LiveAsk() {
                     </section>
                 ))}
             </div>
+            {ask.isPending && ask.variables && (
+                <section
+                    className="animate-in fade-in-0 space-y-3 border-b pb-6"
+                    aria-live="polite"
+                >
+                    <p className="font-medium">{ask.variables}</p>
+                    <div className="flex gap-3">
+                        <Sparkles className="mt-1 size-5 shrink-0 animate-pulse text-primary" />
+                        <div className="w-full max-w-xl space-y-2">
+                            <div className="h-3 w-11/12 animate-pulse rounded bg-muted" />
+                            <div className="h-3 w-9/12 animate-pulse rounded bg-muted" />
+                            <div className="h-3 w-10/12 animate-pulse rounded bg-muted" />
+                        </div>
+                    </div>
+                </section>
+            )}
             <ErrorLine error={ask.error} />
             <form
                 className="flex gap-2 border-t pt-4"

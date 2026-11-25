@@ -135,7 +135,7 @@ class _Compat:
 
 
 _COMPAT: dict[str, _Compat] = {
-    "groq": _Compat("https://api.groq.com/openai/v1", "GROQ_API_KEY", "llama-3.3-70b-versatile"),
+    "groq": _Compat("https://api.groq.com/openai/v1", "GROQ_API_KEY", "openai/gpt-oss-120b"),
     "openrouter": _Compat(
         "https://openrouter.ai/api/v1", "OPENROUTER_API_KEY", "meta-llama/llama-3.3-70b-instruct"
     ),

@@ -3,13 +3,17 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { type Currency } from "@/lib/money";
 import { convertMoney, displayMoney, totalInCurrency } from "@/lib/currency-display";
 import { api, type Session } from "@/lib/api";
+import { displayName, workspaceName } from "@/lib/avatars";
 
 /** Who is signed in. Live mode = a FinSight API client session (cookie held by the server);
  * otherwise the workspace runs on clearly labelled sample data. */
 export type Mode = "loading" | "live" | "sample";
 
 export interface SessionUser {
+    /** The API client ID, e.g. "admin". */
     name: string;
+    /** Friendly form of the client ID, e.g. "Admin". */
+    displayName: string;
     title: string;
     tenantId: string;
     scopes: string[];
@@ -30,7 +34,8 @@ function useSessionState() {
     const user: SessionUser | null = live
         ? {
               name: live.clientId,
-              title: `Tenant ${live.tenantId}`,
+              displayName: displayName(live.clientId),
+              title: workspaceName(live.tenantId),
               tenantId: live.tenantId,
               scopes: live.scopes,
           }

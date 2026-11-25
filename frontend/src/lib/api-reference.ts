@@ -54,6 +54,35 @@ export const ENDPOINT_SCOPES: Record<string, string> = {
     "POST /v1/actions/execute": "actions:execute",
 };
 
+/** Plain-language description per operation (the generated summaries are terse: "Jwks"). */
+export const ENDPOINT_DOCS: Record<string, string> = {
+    "POST /v1/auth/token": "Exchange a client ID and secret for a short-lived access token.",
+    "GET /.well-known/jwks.json": "Public keys for verifying FinSight access tokens.",
+    "POST /v1/api-keys": "Create a scoped API key for a server or integration.",
+    "GET /v1/audit": "Every action taken in your workspace, newest first.",
+    "POST /v1/data/ingest": "Send records as JSON for normalization.",
+    "POST /v1/data/upload": "Upload a bank statement, invoice export or ledger file.",
+    "GET /v1/data/ingestions/{ingestion_id}": "Check the progress of an upload.",
+    "POST /v1/transactions/understand": "Normalize one transaction and classify it.",
+    "GET /v1/graph/entities/{entity_id}": "A customer, invoice or payment and what it connects to.",
+    "GET /v1/graph/paths": "How two entities are connected through the money trail.",
+    "POST /v1/reconciliation/run": "Match payments to invoices across your sources.",
+    "GET /v1/reconciliation/{run_id}/matches": "Matches from a run that need a human decision.",
+    "POST /v1/reconciliation/matches/{match_id}/review": "Approve or reject a suggested match.",
+    "GET /v1/reconciliation/weights": "The signals and weights used to score matches.",
+    "GET /v1/reconciliation/summary": "Matched, unmatched and open totals from the latest run.",
+    "GET /v1/reconciliation/{run_id}": "Results of one reconciliation run.",
+    "POST /v1/payments/match": "Score a single payment against an invoice.",
+    "POST /v1/transactions/explain": "A plain-language explanation of a match or transaction.",
+    "POST /v1/financial/ask": "Ask a question about your finances; answers cite your data.",
+    "POST /v1/anomalies/detect": "Find duplicates, unusual amounts and other outliers.",
+    "POST /v1/anomalies/explain": "Why a transaction was flagged.",
+    "POST /v1/forecast": "Project cash in and out over the coming weeks.",
+    "POST /v1/simulate": "Run a what-if scenario on your cash forecast.",
+    "GET /v1/actions/catalog": "Actions FinSight can take and which need approval.",
+    "POST /v1/actions/execute": "Request an action such as a payment reminder.",
+};
+
 const TAG_TITLES: Record<string, string> = {
     auth: "Authentication",
     "api-keys": "API keys",
@@ -82,7 +111,7 @@ export function groupEndpoints(spec: OpenApiSpec): EndpointGroup[] {
                 method: method.toUpperCase(),
                 path,
                 summary: op.summary ?? "",
-                description: op.description ?? "",
+                description: ENDPOINT_DOCS[key] ?? op.description ?? "",
                 scope: isPublic ? null : (ENDPOINT_SCOPES[key] ?? null),
                 public: isPublic,
             });

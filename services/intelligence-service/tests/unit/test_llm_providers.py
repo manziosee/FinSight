@@ -39,7 +39,7 @@ def test_anthropic_with_key(monkeypatch: pytest.MonkeyPatch) -> None:
 @pytest.mark.parametrize(
     ("name", "env", "url", "model"),
     [
-        ("groq", "GROQ_API_KEY", "https://api.groq.com/openai/v1", "llama-3.3-70b-versatile"),
+        ("groq", "GROQ_API_KEY", "https://api.groq.com/openai/v1", "openai/gpt-oss-120b"),
         ("openrouter", "OPENROUTER_API_KEY", "https://openrouter.ai/api/v1", None),
     ],
 )

@@ -1,6 +1,7 @@
 import { LiveSources } from "@/components/finsight/live/sources";
 import { useSession } from "@/components/finsight/session";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { RowActions } from "@/components/finsight/row-actions";
 import { useRef, useState } from "react";
 import { Upload, Download, FileSpreadsheet, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -18,6 +19,7 @@ export const Route = createFileRoute("/app/sources")({
 });
 function SampleSources() {
     const { uploads, setUploads, setRecords, log } = useWorkspace();
+    const navigate = useNavigate();
     const input = useRef<HTMLInputElement>(null);
     const [busy, setBusy] = useState(false);
     const [error, setError] = useState("");
@@ -135,9 +137,9 @@ function SampleSources() {
                     {error}
                 </p>
             )}
-            <DataTable headers={["File", "Source", "Records", "Imported (UTC)", "Status"]}>
+            <DataTable headers={["File", "Source", "Records", "Imported (UTC)", "Status", ""]}>
                 {uploads.map((u) => (
-                    <tr key={u.id}>
+                    <tr key={u.id} className="group transition-colors hover:bg-muted/40">
                         <td className={cell}>
                             <span className="flex items-center gap-2">
                                 <FileSpreadsheet className="size-4 text-primary" />
@@ -152,6 +154,21 @@ function SampleSources() {
                                 <CheckCircle2 className="mr-1 size-3" />
                                 {u.status}
                             </Pill>
+                        </td>
+                        <td className="px-2 py-1 text-right">
+                            <RowActions
+                                onView={() => navigate({ to: "/app/transactions" })}
+                                onDelete={() => {
+                                    setUploads((xs) => xs.filter((x) => x.id !== u.id));
+                                    log("Upload removed", u.name, "Removed from the upload list.");
+                                    toast("Upload removed", {
+                                        action: {
+                                            label: "Undo",
+                                            onClick: () => setUploads((xs) => [u, ...xs]),
+                                        },
+                                    });
+                                }}
+                            />
                         </td>
                     </tr>
                 ))}

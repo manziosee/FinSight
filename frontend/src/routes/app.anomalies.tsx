@@ -71,7 +71,7 @@ function SampleAnomalies() {
             </div>
             <div className="space-y-3">
                 {visible.map((a) => (
-                    <article key={a.id} className="rounded-lg border bg-card p-5">
+                    <article key={a.id} className="lift rounded-lg border bg-card p-5">
                         <div className="flex flex-wrap justify-between gap-3">
                             <div className="flex items-start gap-3">
                                 <AlertTriangle

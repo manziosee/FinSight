@@ -1,12 +1,23 @@
 import { Link } from "@tanstack/react-router";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import {
+    Bar,
+    BarChart,
+    CartesianGrid,
+    Cell,
+    Pie,
+    PieChart,
+    ResponsiveContainer,
+    Tooltip,
+    XAxis,
+    YAxis,
+} from "recharts";
 import { ArrowUpRight, GitMerge, Sparkles, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { api } from "@/lib/api";
 import { formatAmount, fromApiMinor } from "@/lib/money";
 import { useSession } from "@/components/finsight/session";
-import { ApiGap, ErrorLine, Pill, SourceBadge } from "@/components/finsight/page-kit";
+import { ErrorLine, Pill } from "@/components/finsight/page-kit";
 import { useLatestRun, minorText, shortId } from "./common";
 
 export function LiveDashboard() {
@@ -25,7 +36,7 @@ export function LiveDashboard() {
     if (!data?.has_data)
         return (
             <div className="mx-auto max-w-3xl space-y-6 py-10">
-                <h1 className="text-2xl font-semibold">Welcome, {user?.name}</h1>
+                <h1 className="text-2xl font-semibold">Welcome, {user?.displayName}</h1>
                 <p className="text-muted-foreground">
                     No reconciliation has run for {user?.title.toLowerCase()} yet. Upload a bank
                     statement and your invoices, then run a reconciliation.
@@ -80,11 +91,15 @@ export function LiveDashboard() {
         <div className="mx-auto max-w-7xl space-y-6">
             <div className="flex flex-wrap items-end justify-between gap-3">
                 <div>
-                    <h1 className="flex items-center gap-2 text-2xl font-semibold tracking-tight">
-                        Welcome, {user?.name} <SourceBadge live />
+                    <h1 className="text-2xl font-semibold tracking-tight">
+                        Welcome back, {user?.displayName}
                     </h1>
                     <p className="text-sm text-muted-foreground">
-                        Latest run {shortId(data.run_id)} · {new Date(data.as_of).toLocaleString()}
+                        Last reconciled{" "}
+                        {new Date(data.as_of).toLocaleString(undefined, {
+                            dateStyle: "medium",
+                            timeStyle: "short",
+                        })}
                     </p>
                 </div>
                 <Button
@@ -101,7 +116,7 @@ export function LiveDashboard() {
 
             <div className="grid grid-cols-2 gap-3 lg:grid-cols-6">
                 {kpis.map((k) => (
-                    <div key={k.label} className="rounded-lg border bg-card p-4">
+                    <div key={k.label} className="lift rounded-lg border bg-card p-4">
                         <p className="text-xs text-muted-foreground">{k.label}</p>
                         <p className="num mt-1 text-right text-base font-semibold lg:text-lg">
                             {k.value}
@@ -145,7 +160,7 @@ export function LiveDashboard() {
             )}
 
             <div className="grid gap-4 lg:grid-cols-2">
-                <div className="rounded-lg border bg-card p-4">
+                <div className="lift rounded-lg border bg-card p-4">
                     <h2 className="text-sm font-medium">
                         Open receivables by counterparty{mainCurrency ? ` · ${mainCurrency}` : ""}
                     </h2>
@@ -193,23 +208,28 @@ export function LiveDashboard() {
                         </p>
                     )}
                 </div>
-                <div className="space-y-3">
-                    <ApiGap needs="GET /v1/metrics/cash-position, GET /v1/metrics/trends">
-                        Cash position and weekly matched/unmatched trends need time-series endpoints
-                        the API doesn't have yet.
-                    </ApiGap>
-                </div>
+                <MatchRate
+                    matched={data.matched}
+                    unmatched={data.unmatched}
+                    exceptions={data.exceptions}
+                />
             </div>
 
             <div className="rounded-lg border bg-card">
-                <h2 className="border-b px-4 py-3 text-sm font-medium">
-                    Unmatched records · latest run
-                </h2>
+                <div className="flex items-center justify-between border-b px-4 py-3">
+                    <h2 className="text-sm font-medium">Unmatched records</h2>
+                    <Button asChild variant="ghost" size="sm">
+                        <Link to="/app/reconciliation">
+                            Review all
+                            <ArrowUpRight />
+                        </Link>
+                    </Button>
+                </div>
                 <ul className="divide-y">
                     {data.unmatched_items.map((u) => (
                         <li
                             key={`${u.side}-${u.record_id}`}
-                            className="flex flex-wrap items-center justify-between gap-2 px-4 py-3 text-sm"
+                            className="flex flex-wrap items-center justify-between gap-2 px-4 py-3 text-sm transition-colors hover:bg-muted/40"
                         >
                             <span className="flex items-center gap-3">
                                 <Pill tone="warning">{u.side}</Pill>
@@ -237,6 +257,79 @@ export function LiveDashboard() {
                         })()}
                     </p>
                 )}
+            </div>
+        </div>
+    );
+}
+
+const RATE_COLORS = ["var(--success)", "var(--warning)", "var(--danger)"];
+
+function MatchRate({
+    matched,
+    unmatched,
+    exceptions,
+}: {
+    matched: number;
+    unmatched: number;
+    exceptions: number;
+}) {
+    const rows = [
+        { name: "Matched", value: matched },
+        { name: "Unmatched", value: unmatched },
+        { name: "Exceptions", value: exceptions },
+    ];
+    const total = matched + unmatched + exceptions;
+    const rate = total ? Math.round((matched / total) * 100) : 0;
+    return (
+        <div className="lift rounded-lg border bg-card p-4">
+            <h2 className="text-sm font-medium">Match rate · latest reconciliation</h2>
+            <div className="mt-3 grid items-center gap-4 sm:grid-cols-[180px_1fr]">
+                <div className="relative mx-auto size-44">
+                    <ResponsiveContainer>
+                        <PieChart>
+                            <Pie
+                                data={rows}
+                                dataKey="value"
+                                innerRadius="68%"
+                                outerRadius="100%"
+                                paddingAngle={total > 1 ? 2 : 0}
+                                stroke="none"
+                                isAnimationActive
+                            >
+                                {rows.map((r, i) => (
+                                    <Cell key={r.name} fill={RATE_COLORS[i]} />
+                                ))}
+                            </Pie>
+                            <Tooltip
+                                contentStyle={{
+                                    background: "var(--popover)",
+                                    border: "1px solid var(--border)",
+                                }}
+                            />
+                        </PieChart>
+                    </ResponsiveContainer>
+                    <div className="pointer-events-none absolute inset-0 grid place-items-center text-center">
+                        <div>
+                            <p className="num text-3xl font-semibold">{rate}%</p>
+                            <p className="text-xs text-muted-foreground">matched</p>
+                        </div>
+                    </div>
+                </div>
+                <ul className="space-y-2 text-sm">
+                    {rows.map((r, i) => (
+                        <li key={r.name} className="flex items-center gap-2">
+                            <span
+                                className="size-2.5 rounded-full"
+                                style={{ background: RATE_COLORS[i] }}
+                            />
+                            {r.name}
+                            <span className="num ml-auto font-medium">{r.value}</span>
+                        </li>
+                    ))}
+                    <li className="border-t pt-2 text-xs text-muted-foreground">
+                        {total} records in the latest run
+                    </li>
+                </ul>
             </div>
         </div>
     );

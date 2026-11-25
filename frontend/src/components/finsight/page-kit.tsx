@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { Info, Radio, FlaskConical } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { answerBlocks, boldSpans } from "@/lib/answer-text";
 export function pageHead(title: string, description: string) {
     return {
         meta: [
@@ -18,17 +19,23 @@ export function Page({
     subtitle,
     actions,
     children,
+    level = 1,
 }: {
-    title: string;
+    title: ReactNode;
     subtitle: string;
     actions?: ReactNode;
     children: ReactNode;
+    /** 2 when the page is shown inside another page. */
+    level?: 1 | 2;
 }) {
+    const Heading = level === 1 ? "h1" : "h2";
     return (
         <div className="mx-auto max-w-7xl space-y-6">
             <div className="flex flex-wrap items-end justify-between gap-3">
                 <div>
-                    <h1 className="text-2xl font-semibold">{title}</h1>
+                    <Heading className="flex items-center gap-2 text-2xl font-semibold">
+                        {title}
+                    </Heading>
                     <p className="mt-1 text-sm text-muted-foreground">{subtitle}</p>
                 </div>
                 {actions && <div className="flex flex-wrap gap-2">{actions}</div>}
@@ -112,8 +119,10 @@ export function SourceBadge({ live }: { live: boolean }) {
     );
 }
 
-/** A capability the FinSight API doesn't offer yet. Keep in sync with frontend/API-GAPS.md. */
+/** A capability the FinSight API doesn't offer yet. Keep in sync with frontend/API-GAPS.md.
+ * Shown only in development builds: it is a note for builders, not for people using FinSight. */
 export function ApiGap({ needs, children }: { needs: string; children: ReactNode }) {
+    if (!import.meta.env.DEV) return null;
     return (
         <div
             role="note"
@@ -136,5 +145,48 @@ export function ErrorLine({ error }: { error: unknown }) {
         <p role="alert" className="rounded-md bg-danger-soft p-3 text-sm text-danger">
             {message}
         </p>
+    );
+}
+
+function Inline({ text }: { text: string }) {
+    return (
+        <>
+            {boldSpans(text).map((s, i) =>
+                s.bold ? (
+                    <strong key={i} className="font-semibold text-foreground">
+                        {s.text}
+                    </strong>
+                ) : (
+                    <span key={i}>{s.text}</span>
+                ),
+            )}
+        </>
+    );
+}
+
+/** An AI answer rendered as paragraphs, headings and bullets (no raw HTML). */
+export function RichAnswer({ text, className }: { text: string; className?: string }) {
+    return (
+        <div className={cn("space-y-2 text-sm leading-relaxed", className)}>
+            {answerBlocks(text).map((b, i) =>
+                b.kind === "ul" ? (
+                    <ul key={i} className="list-disc space-y-1 pl-5 marker:text-primary">
+                        {b.items.map((item, j) => (
+                            <li key={j}>
+                                <Inline text={item} />
+                            </li>
+                        ))}
+                    </ul>
+                ) : b.kind === "h" ? (
+                    <p key={i} className="pt-1 font-semibold">
+                        <Inline text={b.text} />
+                    </p>
+                ) : (
+                    <p key={i}>
+                        <Inline text={b.text} />
+                    </p>
+                ),
+            )}
+        </div>
     );
 }

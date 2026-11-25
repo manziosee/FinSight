@@ -11,9 +11,17 @@ import {
     type AuditEvent,
 } from "@/lib/workspace";
 import { useSession } from "./session";
+import { defaultPeriod, type Period } from "@/lib/period";
+import { useTenantValue } from "@/lib/tenant-store";
 
 function useWorkspaceState() {
-    const { currency, setCurrency, money, convert, total } = useSession();
+    const { currency, setCurrency, money, convert, total, user } = useSession();
+    const [period, setPeriod] = useState<Period>(() => defaultPeriod());
+    const [avatar, setAvatar] = useTenantValue<string>(
+        user?.tenantId ?? "sample",
+        `avatar:${user?.name ?? "guest"}`,
+        "initials",
+    );
     const [records, setRecords] = useState<Txn[]>(transactions);
     const [uploads, setUploads] = useState<UploadRecord[]>(initialUploads);
     const [approvals, setApprovals] = useState<Approval[]>(initialApprovals);
@@ -26,10 +34,17 @@ function useWorkspaceState() {
         notifications: true,
         dailyBrief: true,
     });
-    const settings = { ...preferences, currency };
+    // The daily-brief choice outlives a reload, so it is kept per signed-in client.
+    const [dailyBrief, setDailyBrief] = useTenantValue<boolean>(
+        user?.tenantId ?? "sample",
+        `daily-brief:${user?.name ?? "guest"}`,
+        true,
+    );
+    const settings = { ...preferences, dailyBrief, currency };
     const setSettings: React.Dispatch<React.SetStateAction<typeof settings>> = (update) => {
         const next = typeof update === "function" ? update(settings) : update;
         setCurrency(next.currency);
+        if (next.dailyBrief !== dailyBrief) setDailyBrief(next.dailyBrief);
         const { currency: _currency, ...rest } = next;
         setPreferences(rest);
     };
@@ -46,6 +61,10 @@ function useWorkspaceState() {
             ...xs,
         ]);
     return {
+        period,
+        setPeriod,
+        avatar,
+        setAvatar,
         records,
         setRecords,
         uploads,

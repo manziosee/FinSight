@@ -123,7 +123,7 @@ export function LiveAnomalies() {
                 {findings.map((f, i) => (
                     <article
                         key={`${f.record_id}-${f.rule}-${i}`}
-                        className="rounded-lg border bg-card p-5"
+                        className="lift rounded-lg border bg-card p-5"
                     >
                         <div className="flex flex-wrap items-start gap-3">
                             <AlertTriangle
