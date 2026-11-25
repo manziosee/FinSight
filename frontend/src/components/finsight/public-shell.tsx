@@ -32,10 +32,7 @@ export function PublicHeader() {
                             {l.label}
                         </Link>
                     ))}
-                    <Link
-                        to="/app/developers"
-                        className="text-muted-foreground hover:text-foreground"
-                    >
+                    <Link to="/developers" className="text-muted-foreground hover:text-foreground">
                         Developers
                     </Link>
                 </nav>
@@ -71,7 +68,7 @@ export function PublicHeader() {
                         </Button>
                     ))}
                     <Button asChild variant="ghost" className="justify-start">
-                        <Link to="/app/developers">Developers</Link>
+                        <Link to="/developers">Developers</Link>
                     </Button>
                 </nav>
             )}
@@ -95,7 +92,7 @@ export function PublicFooter() {
                 { to: "/features", label: "Features" },
                 { to: "/how-it-works", label: "How it works" },
                 { to: "/app/forecast", label: "Cash forecast" },
-                { to: "/app/developers", label: "Developer explorer" },
+                { to: "/developers", label: "API reference" },
             ],
         },
         {

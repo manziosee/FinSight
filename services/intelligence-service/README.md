@@ -5,9 +5,18 @@ evidence fetched live from reconciliation-service with the caller's own token: t
 narrates real figures and never invents them. PII fields are redacted before anything is
 sent to an AI provider.
 
-Bring-your-own-AI ([llm.py](src/intelligence_service/llm.py)): Anthropic by default
-(`ANTHROPIC_API_KEY`, `FINSIGHT_LLM_MODEL`); without a key it falls back to an offline echo
-provider, so the API keeps working.
+Bring-your-own-AI ([llm.py](src/intelligence_service/llm.py)), chosen with `FINSIGHT_LLM_PROVIDER`:
+
+| Provider | Needs | Default model |
+|---|---|---|
+| `anthropic` (default) | `ANTHROPIC_API_KEY` | `claude-opus-5-5` |
+| `groq` | `GROQ_API_KEY` | `llama-3.3-70b-versatile` |
+| `openrouter` | `OPENROUTER_API_KEY` | `meta-llama/llama-3.3-70b-instruct` |
+| `ollama` | a reachable Ollama server (`OLLAMA_BASE_URL`, default `http://localhost:11434/v1`) | `llama3.1` |
+| `openai` | `OPENAI_API_KEY` (any OpenAI-compatible API via `FINSIGHT_LLM_BASE_URL`) | `gpt-4o-mini` |
+
+`FINSIGHT_LLM_MODEL` overrides the model. Without the needed key the service falls back to an
+offline echo provider, so the API keeps working (answers start with `[offline-explanation]`).
 
 | Endpoint | Scope |
 |---|---|

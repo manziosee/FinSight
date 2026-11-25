@@ -139,6 +139,37 @@ class IdentityService:
             )
         )
 
+    async def upsert_client(
+        self,
+        session: AsyncSession,
+        *,
+        client_id: str,
+        client_secret: str,
+        tenant_id: str,
+        scopes: Iterable[str],
+        tenant_name: str | None = None,
+    ) -> OAuthClient:
+        """Create a client_credentials client, or rotate its secret/scopes if it exists."""
+        scope_str = " ".join(sorted({s.strip() for s in scopes if s.strip()}))
+        if not await session.get(Tenant, tenant_id):
+            session.add(Tenant(id=tenant_id, name=tenant_name or tenant_id))
+        client = await session.get(OAuthClient, client_id)
+        if client:
+            client.secret_hash = _ph.hash(client_secret)
+            client.scopes = scope_str
+            client.tenant_id = tenant_id
+            client.is_active = True
+        else:
+            client = OAuthClient(
+                client_id=client_id,
+                tenant_id=tenant_id,
+                secret_hash=_ph.hash(client_secret),
+                scopes=scope_str,
+            )
+            session.add(client)
+        await session.flush()
+        return client
+
     async def get_tenant(self, session: AsyncSession, tenant_id: str) -> Tenant:
         tenant = await session.get(Tenant, tenant_id)
         if not tenant:

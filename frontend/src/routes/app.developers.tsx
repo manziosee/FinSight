@@ -1,6 +1,6 @@
 import { LiveDevelopers } from "@/components/finsight/live/developers";
 import { useSession } from "@/components/finsight/session";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
 import { Code2, Copy, Play, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -60,7 +60,14 @@ function SampleDevelopers() {
         <Page
             title="Developers"
             subtitle="Sandbox explorer · simulated responses only"
-            actions={<Pill tone="warning">Live API not connected</Pill>}
+            actions={
+                <div className="flex items-center gap-2">
+                    <Pill tone="warning">Live API not connected</Pill>
+                    <Button asChild size="sm" variant="outline">
+                        <Link to="/developers">All API endpoints</Link>
+                    </Button>
+                </div>
+            }
         >
             <section className="border-y py-5">
                 <div className="flex items-center gap-2 text-sm font-medium">

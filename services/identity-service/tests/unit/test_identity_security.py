@@ -124,3 +124,49 @@ async def test_seed_client_secret_rotates_when_config_changes() -> None:
 
     assert ph.verify(existing.secret_hash, _STRONG)
     assert session.added == []
+
+
+# --- operator: create/rotate a client --------------------------------------
+
+
+async def test_upsert_client_creates_tenant_and_client() -> None:
+    from identity_service.models import Tenant
+
+    svc = IdentityService(_settings(), SigningKey(None, "test"))
+    session = _FakeSession()
+    client = await svc.upsert_client(
+        session,  # type: ignore[arg-type]
+        client_id="admin",
+        client_secret=_STRONG,
+        tenant_id="tenant_x",
+        scopes=["b:read", "a:write", "a:write", " "],
+    )
+    assert client.scopes == "a:write b:read"
+    assert any(isinstance(o, Tenant) and o.id == "tenant_x" for o in session.added)
+    PasswordHasher().verify(client.secret_hash, _STRONG)
+
+
+async def test_upsert_client_rotates_existing_secret_and_reactivates() -> None:
+    from identity_service.models import Tenant
+
+    old = OAuthClient(
+        client_id="admin",
+        tenant_id="tenant_x",
+        secret_hash=PasswordHasher().hash("old-secret"),
+        scopes="a:read",
+        is_active=False,
+    )
+    session = _FakeSession(
+        {(OAuthClient, "admin"): old, (Tenant, "tenant_x"): Tenant(id="tenant_x", name="x")}
+    )
+    svc = IdentityService(_settings(), SigningKey(None, "test"))
+    client = await svc.upsert_client(
+        session,  # type: ignore[arg-type]
+        client_id="admin",
+        client_secret=_STRONG,
+        tenant_id="tenant_x",
+        scopes=["a:read", "a:write"],
+    )
+    assert client is old and client.is_active and client.scopes == "a:read a:write"
+    PasswordHasher().verify(client.secret_hash, _STRONG)
+    assert session.added == []

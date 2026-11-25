@@ -12,7 +12,9 @@ from intelligence_service.evidence import EvidenceClient
 from intelligence_service.llm import get_provider
 
 settings = get_settings()
-provider = get_provider(name=settings.llm_provider, model=settings.llm_model)
+provider = get_provider(
+    name=settings.llm_provider, model=settings.llm_model or None, base_url=settings.llm_base_url
+)
 evidence = EvidenceClient(settings.reconciliation_url, settings.graph_url)
 
 app = create_app(

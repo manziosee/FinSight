@@ -275,8 +275,12 @@ services:
     environment:
       <<: *python-env
       FINSIGHT_LLM_PROVIDER: ${FINSIGHT_LLM_PROVIDER:-anthropic}
-      FINSIGHT_LLM_MODEL: ${FINSIGHT_LLM_MODEL:-claude-opus-5}
+      FINSIGHT_LLM_MODEL: ${FINSIGHT_LLM_MODEL:-}
+      FINSIGHT_LLM_BASE_URL: ${FINSIGHT_LLM_BASE_URL:-}
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      GROQ_API_KEY: ${GROQ_API_KEY:-}
+      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
+      OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-}
     expose: ["8000"]
 
   anomaly-service:

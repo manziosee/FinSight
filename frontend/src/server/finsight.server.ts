@@ -293,3 +293,25 @@ export async function health(fetchImpl: typeof fetch = fetch): Promise<Response>
         return json({ ok: false, version: null });
     }
 }
+
+/** GET /api/openapi — the gateway's public, aggregated OpenAPI spec. No session needed: the
+ * public Developers page lists every endpoint from it. */
+export async function openapi(fetchImpl: typeof fetch = fetch): Promise<Response> {
+    try {
+        const upstream = await fetchImpl(`${apiBaseUrl()}/openapi.json`, {
+            headers: { accept: "application/json" },
+            signal: AbortSignal.timeout(10_000),
+        });
+        if (!upstream.ok)
+            return problem(502, "Bad Gateway", "the API specification is unavailable");
+        return new Response(await upstream.text(), {
+            status: 200,
+            headers: {
+                "content-type": "application/json",
+                "cache-control": "public, max-age=300",
+            },
+        });
+    } catch {
+        return problem(502, "Bad Gateway", "the FinSight API is unreachable");
+    }
+}

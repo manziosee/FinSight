@@ -57,7 +57,9 @@ set_secrets finsight-graph-service \
   "${KAFKA_COMMON[@]}" "${JWT_COMMON[@]}"
 
 set_secrets finsight-intelligence-service \
-  "ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}" "FINSIGHT_LLM_PROVIDER=anthropic" \
+  "FINSIGHT_LLM_PROVIDER=${LLM_PROVIDER:-anthropic}" "FINSIGHT_LLM_MODEL=${LLM_MODEL:-}" \
+  "ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}" "GROQ_API_KEY=${GROQ_API_KEY:-}" \
+  "OPENROUTER_API_KEY=${OPENROUTER_API_KEY:-}" \
   "FINSIGHT_RECONCILIATION_URL=$(internal reconciliation-service)" \
   "FINSIGHT_GRAPH_URL=$(internal graph-service)" \
   "${JWT_COMMON[@]}"

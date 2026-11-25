@@ -4,6 +4,8 @@
  * (see src/server/finsight.server.ts). Shapes mirror docs/api/finsight.openapi.json.
  */
 
+import type { OpenApiSpec } from "./api-reference";
+
 export class ApiError extends Error {
     constructor(
         readonly status: number,
@@ -244,6 +246,7 @@ export const api = {
         logout: () => request<void>("/api/session", { method: "DELETE" }),
     },
     health: () => request<{ ok: boolean; version: string | null }>("/api/health"),
+    openapi: () => request<OpenApiSpec>("/api/openapi"),
 
     upload(file: File, source: string) {
         const type = uploadContentType(file);

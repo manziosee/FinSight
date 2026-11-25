@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AppRouteImport } from './routes/app'
+import { Route as DevelopersRouteImport } from './routes/developers'
 import { Route as FaqRouteImport } from './routes/faq'
 import { Route as FeaturesRouteImport } from './routes/features'
 import { Route as HowItWorksRouteImport } from './routes/how-it-works'
@@ -18,6 +19,7 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as RegisterRouteImport } from './routes/register'
 import { Route as ApiHealthRouteImport } from './routes/api.health'
 import { Route as ApiHealthzRouteImport } from './routes/api.healthz'
+import { Route as ApiOpenapiRouteImport } from './routes/api.openapi'
 import { Route as ApiSessionRouteImport } from './routes/api.session'
 import { Route as AppIndexRouteImport } from './routes/app.index'
 import { Route as AppAnomaliesRouteImport } from './routes/app.anomalies'
@@ -42,6 +44,11 @@ const IndexRoute = IndexRouteImport.update({
 const AppRoute = AppRouteImport.update({
   id: '/app',
   path: '/app',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DevelopersRoute = DevelopersRouteImport.update({
+  id: '/developers',
+  path: '/developers',
   getParentRoute: () => rootRouteImport,
 } as any)
 const FaqRoute = FaqRouteImport.update({
@@ -77,6 +84,11 @@ const ApiHealthRoute = ApiHealthRouteImport.update({
 const ApiHealthzRoute = ApiHealthzRouteImport.update({
   id: '/api/healthz',
   path: '/api/healthz',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiOpenapiRoute = ApiOpenapiRouteImport.update({
+  id: '/api/openapi',
+  path: '/api/openapi',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiSessionRoute = ApiSessionRouteImport.update({
@@ -158,6 +170,7 @@ const ApiV1SplatRoute = ApiV1SplatRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/app': typeof AppRouteWithChildren
+  '/developers': typeof DevelopersRoute
   '/faq': typeof FaqRoute
   '/features': typeof FeaturesRoute
   '/how-it-works': typeof HowItWorksRoute
@@ -165,6 +178,7 @@ export interface FileRoutesByFullPath {
   '/register': typeof RegisterRoute
   '/api/health': typeof ApiHealthRoute
   '/api/healthz': typeof ApiHealthzRoute
+  '/api/openapi': typeof ApiOpenapiRoute
   '/api/session': typeof ApiSessionRoute
   '/app/anomalies': typeof AppAnomaliesRoute
   '/app/approvals': typeof AppApprovalsRoute
@@ -183,6 +197,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/developers': typeof DevelopersRoute
   '/faq': typeof FaqRoute
   '/features': typeof FeaturesRoute
   '/how-it-works': typeof HowItWorksRoute
@@ -190,6 +205,7 @@ export interface FileRoutesByTo {
   '/register': typeof RegisterRoute
   '/api/health': typeof ApiHealthRoute
   '/api/healthz': typeof ApiHealthzRoute
+  '/api/openapi': typeof ApiOpenapiRoute
   '/api/session': typeof ApiSessionRoute
   '/app/anomalies': typeof AppAnomaliesRoute
   '/app/approvals': typeof AppApprovalsRoute
@@ -210,6 +226,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/app': typeof AppRouteWithChildren
+  '/developers': typeof DevelopersRoute
   '/faq': typeof FaqRoute
   '/features': typeof FeaturesRoute
   '/how-it-works': typeof HowItWorksRoute
@@ -217,6 +234,7 @@ export interface FileRoutesById {
   '/register': typeof RegisterRoute
   '/api/health': typeof ApiHealthRoute
   '/api/healthz': typeof ApiHealthzRoute
+  '/api/openapi': typeof ApiOpenapiRoute
   '/api/session': typeof ApiSessionRoute
   '/app/anomalies': typeof AppAnomaliesRoute
   '/app/approvals': typeof AppApprovalsRoute
@@ -238,6 +256,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/app'
+    | '/developers'
     | '/faq'
     | '/features'
     | '/how-it-works'
@@ -245,6 +264,7 @@ export interface FileRouteTypes {
     | '/register'
     | '/api/health'
     | '/api/healthz'
+    | '/api/openapi'
     | '/api/session'
     | '/app/anomalies'
     | '/app/approvals'
@@ -263,6 +283,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/developers'
     | '/faq'
     | '/features'
     | '/how-it-works'
@@ -270,6 +291,7 @@ export interface FileRouteTypes {
     | '/register'
     | '/api/health'
     | '/api/healthz'
+    | '/api/openapi'
     | '/api/session'
     | '/app/anomalies'
     | '/app/approvals'
@@ -289,6 +311,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/app'
+    | '/developers'
     | '/faq'
     | '/features'
     | '/how-it-works'
@@ -296,6 +319,7 @@ export interface FileRouteTypes {
     | '/register'
     | '/api/health'
     | '/api/healthz'
+    | '/api/openapi'
     | '/api/session'
     | '/app/anomalies'
     | '/app/approvals'
@@ -316,6 +340,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AppRoute: typeof AppRouteWithChildren
+  DevelopersRoute: typeof DevelopersRoute
   FaqRoute: typeof FaqRoute
   FeaturesRoute: typeof FeaturesRoute
   HowItWorksRoute: typeof HowItWorksRoute
@@ -323,6 +348,7 @@ export interface RootRouteChildren {
   RegisterRoute: typeof RegisterRoute
   ApiHealthRoute: typeof ApiHealthRoute
   ApiHealthzRoute: typeof ApiHealthzRoute
+  ApiOpenapiRoute: typeof ApiOpenapiRoute
   ApiSessionRoute: typeof ApiSessionRoute
   ApiV1SplatRoute: typeof ApiV1SplatRoute
 }
@@ -341,6 +367,13 @@ declare module '@tanstack/react-router' {
       path: '/app'
       fullPath: '/app'
       preLoaderRoute: typeof AppRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/developers': {
+      id: '/developers'
+      path: '/developers'
+      fullPath: '/developers'
+      preLoaderRoute: typeof DevelopersRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/faq': {
@@ -390,6 +423,13 @@ declare module '@tanstack/react-router' {
       path: '/api/healthz'
       fullPath: '/api/healthz'
       preLoaderRoute: typeof ApiHealthzRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/openapi': {
+      id: '/api/openapi'
+      path: '/api/openapi'
+      fullPath: '/api/openapi'
+      preLoaderRoute: typeof ApiOpenapiRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/session': {
@@ -537,6 +577,7 @@ const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AppRoute: AppRouteWithChildren,
+  DevelopersRoute: DevelopersRoute,
   FaqRoute: FaqRoute,
   FeaturesRoute: FeaturesRoute,
   HowItWorksRoute: HowItWorksRoute,
@@ -544,6 +585,7 @@ const rootRouteChildren: RootRouteChildren = {
   RegisterRoute: RegisterRoute,
   ApiHealthRoute: ApiHealthRoute,
   ApiHealthzRoute: ApiHealthzRoute,
+  ApiOpenapiRoute: ApiOpenapiRoute,
   ApiSessionRoute: ApiSessionRoute,
   ApiV1SplatRoute: ApiV1SplatRoute,
 }

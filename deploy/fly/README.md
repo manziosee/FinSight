@@ -34,7 +34,9 @@ cd deploy/fly
 
 `provision.sh` never prints secrets: database URLs go straight into each app's secrets via
 `fly postgres attach`, and generated passwords/Tigris keys go into `secrets.env`.
-Optional: add `ANTHROPIC_API_KEY` to `secrets.env` and re-run `./set-secrets.sh`.
+AI (optional): set `LLM_PROVIDER` in `secrets.env` to `groq`, `openrouter` or `anthropic` and add the
+matching key (`GROQ_API_KEY`, `OPENROUTER_API_KEY` or `ANTHROPIC_API_KEY`); `LLM_MODEL` overrides the
+provider's default model. Then re-run `./set-secrets.sh`. Without a key the AI answers in offline mode.
 
 ## 2. Deploy
 

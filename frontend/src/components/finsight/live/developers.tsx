@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Link } from "@tanstack/react-router";
 import { useMutation } from "@tanstack/react-query";
 import { Code2, Copy, Play, KeyRound, ExternalLink, Loader2 } from "lucide-react";
 import { toast } from "sonner";
@@ -94,14 +95,19 @@ export function LiveDevelopers() {
                         ? JSON.stringify(call.data.body, null, 2)
                         : "Send a request to see the live response."}
                 </pre>
-                {apiUrl && (
+                <div className="flex flex-wrap gap-4">
                     <Button asChild variant="link" className="h-auto p-0">
-                        <a href={`${apiUrl}/docs`} target="_blank" rel="noreferrer">
-                            Full API reference (OpenAPI)
-                            <ExternalLink />
-                        </a>
+                        <Link to="/developers">All endpoints and scopes</Link>
                     </Button>
-                )}
+                    {apiUrl && (
+                        <Button asChild variant="link" className="h-auto p-0">
+                            <a href={`${apiUrl}/docs`} target="_blank" rel="noreferrer">
+                                Try it in Swagger
+                                <ExternalLink />
+                            </a>
+                        </Button>
+                    )}
+                </div>
             </section>
             <section className="space-y-4">
                 <h2 className="flex items-center gap-2 text-sm font-medium">
