@@ -33,7 +33,6 @@ import {
 } from "@/components/ui/select";
 import { SourceBadge } from "@/components/finsight/page-kit";
 import { formatPeriod, inPeriod } from "@/lib/period";
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Input } from "@/components/ui/input";
 import { type Status, type Txn } from "@/lib/demo-data";
 import { useWorkspace } from "@/components/finsight/workspace-context";
@@ -193,16 +192,16 @@ export function SampleTransactions({ embedded = false }: { embedded?: boolean })
                 )}
             </div>
 
-            <Sheet open={!!sel} onOpenChange={(o) => !o && setSel(null)}>
-                <SheetContent className="w-full overflow-y-auto sm:max-w-lg">
+            <Dialog open={!!sel} onOpenChange={(o) => !o && setSel(null)}>
+                <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
                     {sel && (
                         <>
-                            <SheetHeader>
-                                <SheetTitle>
+                            <DialogHeader>
+                                <DialogTitle>
                                     {sel.counterparty} · {sel.id}
-                                </SheetTitle>
-                            </SheetHeader>
-                            <div className="space-y-5 px-4 pb-6">
+                                </DialogTitle>
+                            </DialogHeader>
+                            <div className="space-y-5">
                                 <div className="flex items-center justify-between">
                                     <StatusBadge status={sel.status} />
                                     <span className="num text-2xl font-semibold">
@@ -261,8 +260,8 @@ export function SampleTransactions({ embedded = false }: { embedded?: boolean })
                             </div>
                         </>
                     )}
-                </SheetContent>
-            </Sheet>
+                </DialogContent>
+            </Dialog>
             <EditRecordDialog
                 record={editing}
                 onClose={() => setEditing(null)}

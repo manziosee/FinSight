@@ -45,6 +45,7 @@ class Settings(ServiceSettings):
             ("/v1/auth", self.identity_url, "auth"),
             ("/v1/api-keys", self.identity_url, "api-keys"),
             ("/v1/audit", self.identity_url, "audit"),
+            ("/v1/members", self.identity_url, "members"),
             ("/.well-known/jwks.json", self.identity_url, "auth"),
             ("/v1/data", self.ingestion_url, "ingestion"),
             ("/v1/transactions/understand", self.normalization_url, "normalization"),

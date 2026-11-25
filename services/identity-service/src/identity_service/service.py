@@ -11,13 +11,61 @@ from argon2.exceptions import VerifyMismatchError
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from finsight_common.errors import AuthenticationError, AuthorizationError, NotFoundError
+from finsight_common.errors import (
+    AuthenticationError,
+    AuthorizationError,
+    ConflictError,
+    FinSightError,
+    NotFoundError,
+)
 from finsight_common.security import generate_api_key, hash_api_key
 from identity_service.config import Settings
 from identity_service.keys import SigningKey
 from identity_service.models import ApiKey, OAuthClient, Tenant
 
 _ph = PasswordHasher()
+
+# --- workspace members --------------------------------------------------------------------
+# A member is a client_credentials client in the caller's tenant. Roles are preset scope
+# bundles, so no schema change is needed; anything else reads back as "custom".
+_READ = {
+    "transactions:read",
+    "reconciliation:read",
+    "graph:read",
+    "anomalies:read",
+    "financial:ask",
+}
+_ANALYST = _READ | {
+    "data:write",
+    "transactions:write",
+    "payments:match",
+    "reconciliation:run",
+    "forecast:run",
+    "actions:execute",
+}
+ROLE_SCOPES: dict[str, frozenset[str]] = {
+    "viewer": frozenset(_READ | {"audit:read"}),
+    "analyst": frozenset(_ANALYST),
+    "admin": frozenset(_ANALYST | {"api-keys:write", "audit:read", "members:manage"}),
+}
+MEMBER_ID_PATTERN = r"^[a-z0-9][a-z0-9._-]{2,63}$"
+
+
+def role_of(scopes: Iterable[str]) -> str:
+    have = frozenset(scopes)
+    return next((r for r, s in ROLE_SCOPES.items() if s == have), "custom")
+
+
+def member_view(client: OAuthClient, caller: str) -> dict:
+    scopes = sorted(client.scopes.split())
+    return {
+        "client_id": client.client_id,
+        "role": role_of(scopes),
+        "scopes": scopes,
+        "is_active": client.is_active,
+        "created_at": client.created_at,
+        "is_you": client.client_id == caller,
+    }
 
 
 class IdentityService:
@@ -167,6 +215,105 @@ class IdentityService:
                 scopes=scope_str,
             )
             session.add(client)
+        await session.flush()
+        return client
+
+    # --- members ---------------------------------------------------------------------------
+
+    @staticmethod
+    def _role_scopes(role: str, caller_scopes: set[str]) -> frozenset[str]:
+        scopes = ROLE_SCOPES.get(role)
+        if scopes is None:
+            raise FinSightError(f"unknown role '{role}'")
+        if not scopes <= caller_scopes:
+            raise AuthorizationError("you can't give someone more access than you have")
+        return scopes
+
+    async def _member(self, session: AsyncSession, tenant_id: str, client_id: str) -> OAuthClient:
+        client = await session.get(OAuthClient, client_id)
+        if client is None or client.tenant_id != tenant_id:
+            raise NotFoundError(f"member '{client_id}' not found")
+        return client
+
+    async def list_members(self, session: AsyncSession, tenant_id: str) -> list[OAuthClient]:
+        rows = await session.execute(
+            select(OAuthClient)
+            .where(OAuthClient.tenant_id == tenant_id)
+            .order_by(OAuthClient.created_at)
+        )
+        return list(rows.scalars().all())
+
+    async def add_member(
+        self,
+        session: AsyncSession,
+        *,
+        tenant_id: str,
+        client_id: str,
+        role: str,
+        caller_scopes: set[str],
+        secret: str,
+    ) -> OAuthClient:
+        scopes = self._role_scopes(role, caller_scopes)
+        if await session.get(OAuthClient, client_id):
+            raise ConflictError(f"the username '{client_id}' is already taken")
+        client = OAuthClient(
+            client_id=client_id,
+            tenant_id=tenant_id,
+            secret_hash=_ph.hash(secret),
+            scopes=" ".join(sorted(scopes)),
+            is_active=True,
+        )
+        session.add(client)
+        await session.flush()
+        return client
+
+    async def update_member(
+        self,
+        session: AsyncSession,
+        *,
+        tenant_id: str,
+        client_id: str,
+        caller: str,
+        caller_scopes: set[str],
+        role: str | None = None,
+        is_active: bool | None = None,
+    ) -> OAuthClient:
+        if client_id == caller:
+            raise AuthorizationError("you can't change your own access")
+        client = await self._member(session, tenant_id, client_id)
+        if role is not None:
+            client.scopes = " ".join(sorted(self._role_scopes(role, caller_scopes)))
+        if is_active is not None:
+            client.is_active = is_active
+        await session.flush()
+        return client
+
+    async def reset_member_secret(
+        self, session: AsyncSession, *, tenant_id: str, client_id: str, secret: str
+    ) -> OAuthClient:
+        client = await self._member(session, tenant_id, client_id)
+        client.secret_hash = _ph.hash(secret)
+        await session.flush()
+        return client
+
+    async def remove_member(
+        self, session: AsyncSession, *, tenant_id: str, client_id: str, caller: str
+    ) -> None:
+        if client_id == caller:
+            raise AuthorizationError("you can't remove yourself")
+        client = await self._member(session, tenant_id, client_id)
+        await session.delete(client)
+        await session.flush()
+
+    async def grant_scopes(
+        self, session: AsyncSession, *, client_id: str, scopes: Iterable[str]
+    ) -> OAuthClient:
+        """Add scopes to an existing client without touching its secret."""
+        client = await session.get(OAuthClient, client_id)
+        if client is None:
+            raise NotFoundError(f"client '{client_id}' not found")
+        merged = set(client.scopes.split()) | {s.strip() for s in scopes if s.strip()}
+        client.scopes = " ".join(sorted(merged))
         await session.flush()
         return client
 

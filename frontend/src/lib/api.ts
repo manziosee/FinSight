@@ -57,6 +57,20 @@ const v1 = (path: string) => `/api/v1/${path}`;
 const post = <T>(path: string, body: unknown) =>
     request<T>(v1(path), { method: "POST", body: JSON.stringify(body) });
 
+export type MemberRole = "admin" | "analyst" | "viewer";
+export interface Member {
+    client_id: string;
+    role: MemberRole | "custom";
+    scopes: string[];
+    is_active: boolean;
+    created_at: string;
+    is_you: boolean;
+}
+export interface MemberCredentials {
+    member: Member;
+    client_secret: string;
+}
+
 // ---- session ---------------------------------------------------------------------------
 
 export type Session =
@@ -247,6 +261,20 @@ export const api = {
     },
     health: () => request<{ ok: boolean; version: string | null }>("/api/health"),
     openapi: () => request<OpenApiSpec>("/api/openapi"),
+    members: {
+        list: () => request<Member[]>(v1("members")),
+        add: (clientId: string, role: MemberRole) =>
+            post<MemberCredentials>("members", { client_id: clientId, role }),
+        update: (clientId: string, change: { role?: MemberRole; is_active?: boolean }) =>
+            request<Member>(v1(`members/${encodeURIComponent(clientId)}`), {
+                method: "PATCH",
+                body: JSON.stringify(change),
+            }),
+        resetSecret: (clientId: string) =>
+            post<MemberCredentials>(`members/${encodeURIComponent(clientId)}/reset-secret`, {}),
+        remove: (clientId: string) =>
+            request<void>(v1(`members/${encodeURIComponent(clientId)}`), { method: "DELETE" }),
+    },
 
     upload(file: File, source: string) {
         const type = uploadContentType(file);

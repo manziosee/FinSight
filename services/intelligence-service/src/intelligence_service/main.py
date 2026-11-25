@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import json
+
 from fastapi import Depends, Request
 from pydantic import BaseModel, Field
 
@@ -8,7 +10,7 @@ from finsight_common.auth import Principal, require_scopes
 from finsight_common.errors import NotFoundError
 from intelligence_service import __version__
 from intelligence_service.config import get_settings
-from intelligence_service.evidence import EvidenceClient
+from intelligence_service.evidence import EvidenceClient, financial_snapshot, match_snapshot
 from intelligence_service.llm import get_provider
 
 settings = get_settings()
@@ -29,12 +31,15 @@ app = create_app(
 )
 
 _SYSTEM = (
-    "You are FinSight's financial analyst. You are given a JSON 'evidence' object containing "
-    "real figures from the company's reconciliation and graph data, already redacted of PII. "
-    "Answer using ONLY the numbers in evidence — never invent a figure. If evidence is "
-    "insufficient to answer, say so plainly. Name the figures you relied on in plain words, "
-    "never as bracketed citation markers or field paths. Keep the answer under 150 words; "
-    "be direct and concrete, and use short Markdown bullet points when listing items."
+    "You are FinSight's assistant for finance teams. You receive an 'evidence' object with "
+    "real figures from the company's reconciliation and financial graph (PII removed). "
+    "Rules: use ONLY figures in evidence and never invent one; if evidence cannot answer, "
+    "say what is missing in one sentence and suggest what to upload or run. Write for a "
+    "business reader: amounts with their currency exactly as given, customer names, dates "
+    "and invoice references. Never show record IDs, run IDs, match IDs, field names, JSON, "
+    "code formatting or the words 'minor units'. No preamble and no bracketed citations. "
+    "Lead with the direct answer in one sentence, then up to 4 short Markdown bullets. "
+    "Keep it under 120 words."
 )
 
 
@@ -74,7 +79,7 @@ async def explain(
     grounded = False
     gathered: dict = dict(body.context)
     if body.run_id and body.match_id:
-        match_ev = await evidence.match_context(body.run_id, body.match_id, _auth_header(request))
+        match_ev = await match_snapshot(evidence, body.run_id, body.match_id, _auth_header(request))
         gathered["match"] = match_ev
         grounded = bool(match_ev.get("found"))
         if not match_ev.get("found"):
@@ -82,7 +87,13 @@ async def explain(
                 f"no match or unmatched record '{body.match_id}' in run '{body.run_id}'"
             )
 
-    text = await provider.complete(_SYSTEM, f"Explain: {body.subject}\n\nEvidence:\n{gathered}")
+    task = (
+        "Explain to the reviewer why this payment was or wasn't matched, whether it looks "
+        "right, and what they should do next."
+        if grounded
+        else f"Explain: {body.subject}"
+    )
+    text = await provider.complete(_SYSTEM, f"{task}\n\nEvidence:\n{json.dumps(gathered)}")
     return Answer(
         answer=text,
         evidence=gathered,
@@ -97,11 +108,13 @@ async def ask(
     request: Request,
     _: Principal = Depends(require_scopes("financial:ask")),
 ) -> Answer:
-    summary = await evidence.reconciliation_summary(_auth_header(request))
-    gathered = {"reconciliation_summary": summary, **body.context}
-    grounded = bool(summary.get("has_data"))
+    snapshot = await financial_snapshot(evidence, _auth_header(request))
+    gathered = {"finances": snapshot, **body.context}
+    grounded = bool(snapshot.get("has_data"))
 
-    text = await provider.complete(_SYSTEM, f"Question: {body.question}\n\nEvidence:\n{gathered}")
+    text = await provider.complete(
+        _SYSTEM, f"Question: {body.question}\n\nEvidence:\n{json.dumps(gathered)}"
+    )
     return Answer(
         answer=text,
         evidence=gathered,

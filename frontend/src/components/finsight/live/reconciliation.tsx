@@ -15,8 +15,16 @@ import { Button } from "@/components/ui/button";
 import { api, type MatchOut } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import { csvString, downloadFile } from "@/lib/workspace";
-import { ApiGap, ErrorLine, Pill, SourceBadge } from "@/components/finsight/page-kit";
-import { useLatestRun, minorText, pct, shortId } from "./common";
+import { ApiGap, ErrorLine, Pill, SourceBadge, RichAnswer } from "@/components/finsight/page-kit";
+import {
+    type RecordInfo,
+    useLatestRun,
+    minorText,
+    pct,
+    recordLabel,
+    shortId,
+    useRecordInfo,
+} from "./common";
 
 export function LiveReconciliation() {
     const queryClient = useQueryClient();
@@ -35,6 +43,10 @@ export function LiveReconciliation() {
         enabled: !!runId,
     });
     const items = queue.data ?? [];
+    const info = useRecordInfo([
+        ...items.flatMap((m) => [m.payment_id, ...m.invoice_ids]),
+        ...(runQuery.data?.unmatched_items.map((u) => u.record_id) ?? []),
+    ]);
     const cur: MatchOut | undefined = items[Math.min(idx, Math.max(0, items.length - 1))];
 
     const refresh = useCallback(() => {
@@ -76,8 +88,7 @@ export function LiveReconciliation() {
         },
     });
     const explain = useMutation({
-        mutationFn: (m: MatchOut) =>
-            api.explain(`match ${m.id} in run ${runId}`, runId ?? undefined, m.id),
+        mutationFn: (m: MatchOut) => api.explain("this match", runId ?? undefined, m.id),
         onSuccess: (a, m) => setAnswer((x) => ({ ...x, [m.id]: a.answer })),
     });
 
@@ -189,16 +200,19 @@ export function LiveReconciliation() {
                                     it.id === cur?.id && "border-primary ring-1 ring-primary",
                                 )}
                             >
-                                <div className="flex justify-between">
-                                    <span className="font-mono text-xs">
-                                        {shortId(it.payment_id)}
+                                <div className="flex justify-between gap-2">
+                                    <span className="truncate font-medium" title={it.payment_id}>
+                                        {recordLabel(info[it.payment_id], it.payment_id)}
                                     </span>
                                     <span className="text-xs text-muted-foreground">
                                         {it.match_type}
                                     </span>
                                 </div>
                                 <div className="num mt-1 text-right">
-                                    {minorText(it.amount_applied_minor)}
+                                    {minorText(
+                                        it.amount_applied_minor,
+                                        info[it.payment_id]?.currency,
+                                    )}
                                 </div>
                                 <ConfidenceBar value={it.confidence} />
                             </button>
@@ -223,9 +237,12 @@ export function LiveReconciliation() {
                                 <p className="text-xs uppercase tracking-wide text-muted-foreground">
                                     Payment
                                 </p>
-                                <p className="mt-2 break-all font-mono text-sm">{cur.payment_id}</p>
-                                <p className="num mt-1 text-2xl font-semibold">
-                                    {minorText(cur.amount_applied_minor)}
+                                <RecordFacts id={cur.payment_id} info={info[cur.payment_id]} />
+                                <p className="num mt-2 text-2xl font-semibold">
+                                    {minorText(
+                                        cur.amount_applied_minor,
+                                        info[cur.payment_id]?.currency,
+                                    )}
                                 </p>
                                 <p className="mt-1 text-xs text-muted-foreground">amount applied</p>
                             </div>
@@ -237,9 +254,7 @@ export function LiveReconciliation() {
                                     Proposed invoice{cur.invoice_ids.length > 1 && "s"}
                                 </p>
                                 {cur.invoice_ids.map((inv) => (
-                                    <p key={inv} className="mt-2 break-all font-mono text-sm">
-                                        {inv}
-                                    </p>
+                                    <RecordFacts key={inv} id={inv} info={info[inv]} />
                                 ))}
                                 <p className="mt-3 flex justify-between border-t pt-2 text-sm">
                                     <span className="text-muted-foreground">Residual</span>
@@ -251,7 +266,10 @@ export function LiveReconciliation() {
                                                 : "text-warning",
                                         )}
                                     >
-                                        {minorText(cur.residual_minor)}
+                                        {minorText(
+                                            cur.residual_minor,
+                                            info[cur.payment_id]?.currency,
+                                        )}
                                     </span>
                                 </p>
                             </div>
@@ -279,10 +297,13 @@ export function LiveReconciliation() {
                                 {cur.explanation}
                             </p>
                             {answer[cur.id] && (
-                                <p className="rounded-md border p-3 text-sm">
-                                    <strong className="font-medium">AI explanation: </strong>
-                                    {answer[cur.id]}
-                                </p>
+                                <div className="animate-in fade-in-0 slide-in-from-top-1 rounded-lg border border-primary/20 bg-primary/5 p-4 duration-300">
+                                    <p className="mb-2 flex items-center gap-1.5 text-xs font-medium uppercase tracking-wide text-primary">
+                                        <Sparkles className="size-3.5" />
+                                        AI explanation
+                                    </p>
+                                    <RichAnswer text={answer[cur.id] ?? ""} />
+                                </div>
                             )}
                             <div className="flex flex-wrap gap-2">
                                 <Button
@@ -362,11 +383,21 @@ export function LiveReconciliation() {
                         {run.unmatched_items.map((u) => (
                             <li
                                 key={`${u.side}-${u.record_id}`}
-                                className="flex flex-wrap justify-between gap-2 px-4 py-2"
+                                className="flex flex-wrap justify-between gap-2 px-4 py-2.5 transition-colors hover:bg-muted/40"
                             >
-                                <span>
-                                    <Pill tone="warning">{u.side}</Pill>{" "}
-                                    <span className="ml-2 font-mono text-xs">{u.record_id}</span>
+                                <span className="flex items-center gap-2">
+                                    <Pill tone="warning">{u.side}</Pill>
+                                    <span title={u.record_id}>
+                                        {recordLabel(info[u.record_id], u.record_id)}
+                                    </span>
+                                    {info[u.record_id]?.amountMinor != null && (
+                                        <span className="num font-medium">
+                                            {minorText(
+                                                info[u.record_id]!.amountMinor!,
+                                                info[u.record_id]?.currency,
+                                            )}
+                                        </span>
+                                    )}
                                 </span>
                                 <span className="text-muted-foreground">{u.reason}</span>
                             </li>
@@ -379,6 +410,23 @@ export function LiveReconciliation() {
                 currency or the signal breakdown yet. Fee and write-off decisions also aren't
                 available.
             </ApiGap>
+        </div>
+    );
+}
+
+function RecordFacts({ id, info }: { id: string; info: RecordInfo | undefined }) {
+    if (!info)
+        return (
+            <p className="mt-2 h-10 animate-pulse rounded bg-muted" aria-label="Loading record" />
+        );
+    return (
+        <div className="mt-2 space-y-0.5" title={id}>
+            <p className="font-medium">{info.counterparty ?? info.description ?? shortId(id)}</p>
+            <p className="text-xs text-muted-foreground">
+                {[info.reference, info.date && new Date(info.date).toLocaleDateString()]
+                    .filter(Boolean)
+                    .join(" · ")}
+            </p>
         </div>
     );
 }

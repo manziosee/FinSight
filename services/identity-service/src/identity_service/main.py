@@ -3,7 +3,8 @@ from __future__ import annotations
 import asyncio
 import datetime as dt
 import json
-from typing import Annotated
+import secrets
+from typing import Annotated, Literal
 
 import jwt
 from fastapi import Depends, Form, Query, Request
@@ -21,7 +22,7 @@ from identity_service import __version__
 from identity_service.config import get_settings
 from identity_service.keys import SigningKey
 from identity_service.models import AuditEvent
-from identity_service.service import IdentityService
+from identity_service.service import MEMBER_ID_PATTERN, IdentityService, member_view
 
 settings = get_settings()
 db = Database(settings.identity_db_dsn)
@@ -244,3 +245,104 @@ async def list_audit(
         )
         for r in rows
     ]
+
+
+# --- workspace members ------------------------------------------------------------------
+
+
+class Member(BaseModel):
+    client_id: str
+    role: str = Field(description="admin | analyst | viewer | custom")
+    scopes: list[str]
+    is_active: bool
+    created_at: dt.datetime
+    is_you: bool
+
+
+class MemberCreate(BaseModel):
+    client_id: str = Field(
+        pattern=MEMBER_ID_PATTERN,
+        examples=["alice"],
+        description="Their sign-in name: 3-64 lowercase letters, digits, '.', '_' or '-'.",
+    )
+    role: Literal["admin", "analyst", "viewer"] = "analyst"
+
+
+class MemberUpdate(BaseModel):
+    role: Literal["admin", "analyst", "viewer"] | None = None
+    is_active: bool | None = None
+
+
+class MemberCredentials(BaseModel):
+    member: Member
+    client_secret: str = Field(description="Shown once. Share it with the person securely.")
+
+
+_manage = _require("members:manage")
+
+
+@app.get("/v1/members", response_model=list[Member], tags=["members"])
+async def list_members(principal: Principal = Depends(_manage)) -> list[Member]:
+    async with db.session() as session:
+        rows = await identity.list_members(session, principal.tenant_id)
+        return [Member(**member_view(c, principal.subject)) for c in rows]
+
+
+@app.post("/v1/members", response_model=MemberCredentials, status_code=201, tags=["members"])
+async def add_member(
+    body: MemberCreate, principal: Principal = Depends(_manage)
+) -> MemberCredentials:
+    secret = secrets.token_urlsafe(24)
+    async with db.session() as session:
+        client = await identity.add_member(
+            session,
+            tenant_id=principal.tenant_id,
+            client_id=body.client_id,
+            role=body.role,
+            caller_scopes=principal.scopes,
+            secret=secret,
+        )
+        member = Member(**member_view(client, principal.subject))
+    return MemberCredentials(member=member, client_secret=secret)
+
+
+@app.patch("/v1/members/{client_id}", response_model=Member, tags=["members"])
+async def update_member(
+    client_id: str, body: MemberUpdate, principal: Principal = Depends(_manage)
+) -> Member:
+    async with db.session() as session:
+        client = await identity.update_member(
+            session,
+            tenant_id=principal.tenant_id,
+            client_id=client_id,
+            caller=principal.subject,
+            caller_scopes=principal.scopes,
+            role=body.role,
+            is_active=body.is_active,
+        )
+        return Member(**member_view(client, principal.subject))
+
+
+@app.post(
+    "/v1/members/{client_id}/reset-secret",
+    response_model=MemberCredentials,
+    tags=["members"],
+)
+async def reset_member_secret(
+    client_id: str, principal: Principal = Depends(_manage)
+) -> MemberCredentials:
+    secret = secrets.token_urlsafe(24)
+    async with db.session() as session:
+        client = await identity.reset_member_secret(
+            session, tenant_id=principal.tenant_id, client_id=client_id, secret=secret
+        )
+        member = Member(**member_view(client, principal.subject))
+    return MemberCredentials(member=member, client_secret=secret)
+
+
+@app.delete("/v1/members/{client_id}", status_code=204, tags=["members"])
+async def remove_member(client_id: str, principal: Principal = Depends(_manage)) -> None:
+    async with db.session() as session:
+        await identity.remove_member(
+            session, tenant_id=principal.tenant_id, client_id=client_id, caller=principal.subject
+        )

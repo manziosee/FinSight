@@ -38,6 +38,7 @@ const SCOPE_LABELS: Record<string, string> = {
     "actions:execute": "Request actions",
     "api-keys:write": "Manage API keys",
     "audit:read": "View audit log",
+    "members:manage": "Manage team",
 };
 
 function Section({

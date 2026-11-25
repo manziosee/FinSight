@@ -33,6 +33,7 @@ import { Route as AppReconciliationRouteImport } from './routes/app.reconciliati
 import { Route as AppReportsRouteImport } from './routes/app.reports'
 import { Route as AppSettingsRouteImport } from './routes/app.settings'
 import { Route as AppSourcesRouteImport } from './routes/app.sources'
+import { Route as AppTeamRouteImport } from './routes/app.team'
 import { Route as AppTransactionsRouteImport } from './routes/app.transactions'
 import { Route as ApiV1SplatRouteImport } from './routes/api.v1.$'
 
@@ -156,6 +157,11 @@ const AppSourcesRoute = AppSourcesRouteImport.update({
   path: '/sources',
   getParentRoute: () => AppRoute,
 } as any)
+const AppTeamRoute = AppTeamRouteImport.update({
+  id: '/team',
+  path: '/team',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppTransactionsRoute = AppTransactionsRouteImport.update({
   id: '/transactions',
   path: '/transactions',
@@ -191,6 +197,7 @@ export interface FileRoutesByFullPath {
   '/app/reports': typeof AppReportsRoute
   '/app/settings': typeof AppSettingsRoute
   '/app/sources': typeof AppSourcesRoute
+  '/app/team': typeof AppTeamRoute
   '/app/transactions': typeof AppTransactionsRoute
   '/app/': typeof AppIndexRoute
   '/api/v1/$': typeof ApiV1SplatRoute
@@ -218,6 +225,7 @@ export interface FileRoutesByTo {
   '/app/reports': typeof AppReportsRoute
   '/app/settings': typeof AppSettingsRoute
   '/app/sources': typeof AppSourcesRoute
+  '/app/team': typeof AppTeamRoute
   '/app/transactions': typeof AppTransactionsRoute
   '/app': typeof AppIndexRoute
   '/api/v1/$': typeof ApiV1SplatRoute
@@ -247,6 +255,7 @@ export interface FileRoutesById {
   '/app/reports': typeof AppReportsRoute
   '/app/settings': typeof AppSettingsRoute
   '/app/sources': typeof AppSourcesRoute
+  '/app/team': typeof AppTeamRoute
   '/app/transactions': typeof AppTransactionsRoute
   '/app/': typeof AppIndexRoute
   '/api/v1/$': typeof ApiV1SplatRoute
@@ -277,6 +286,7 @@ export interface FileRouteTypes {
     | '/app/reports'
     | '/app/settings'
     | '/app/sources'
+    | '/app/team'
     | '/app/transactions'
     | '/app/'
     | '/api/v1/$'
@@ -304,6 +314,7 @@ export interface FileRouteTypes {
     | '/app/reports'
     | '/app/settings'
     | '/app/sources'
+    | '/app/team'
     | '/app/transactions'
     | '/app'
     | '/api/v1/$'
@@ -332,6 +343,7 @@ export interface FileRouteTypes {
     | '/app/reports'
     | '/app/settings'
     | '/app/sources'
+    | '/app/team'
     | '/app/transactions'
     | '/app/'
     | '/api/v1/$'
@@ -523,6 +535,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppSourcesRouteImport
       parentRoute: typeof AppRoute
     }
+    '/app/team': {
+      id: '/app/team'
+      path: '/team'
+      fullPath: '/app/team'
+      preLoaderRoute: typeof AppTeamRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/app/transactions': {
       id: '/app/transactions'
       path: '/transactions'
@@ -552,6 +571,7 @@ interface AppRouteChildren {
   AppReportsRoute: typeof AppReportsRoute
   AppSettingsRoute: typeof AppSettingsRoute
   AppSourcesRoute: typeof AppSourcesRoute
+  AppTeamRoute: typeof AppTeamRoute
   AppTransactionsRoute: typeof AppTransactionsRoute
   AppIndexRoute: typeof AppIndexRoute
 }
@@ -568,6 +588,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppReportsRoute: AppReportsRoute,
   AppSettingsRoute: AppSettingsRoute,
   AppSourcesRoute: AppSourcesRoute,
+  AppTeamRoute: AppTeamRoute,
   AppTransactionsRoute: AppTransactionsRoute,
   AppIndexRoute: AppIndexRoute,
 }

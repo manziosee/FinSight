@@ -4,8 +4,7 @@ import { Sparkles, Send, ArrowUpRight, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { api, type Answer } from "@/lib/api";
-import { ErrorLine, Page, Pill, RichAnswer } from "@/components/finsight/page-kit";
-import { pct } from "./common";
+import { ErrorLine, Page, RichAnswer } from "@/components/finsight/page-kit";
 
 const SUGGESTIONS = [
     "Which invoices are still open?",
@@ -72,23 +71,12 @@ export function LiveAsk() {
                         <div className="flex gap-3">
                             <Sparkles className="mt-1 size-5 shrink-0 text-primary" />
                             <div className="min-w-0 space-y-3">
-                                <div className="flex flex-wrap gap-2">
-                                    <Pill tone={m.answer.grounded ? "success" : "warning"}>
-                                        {m.answer.grounded
-                                            ? "Grounded in your data"
-                                            : "Not enough data"}
-                                    </Pill>
-                                    <Pill>confidence {pct(m.answer.confidence)}</Pill>
-                                </div>
                                 <RichAnswer className="max-w-3xl" text={m.answer.answer} />
-                                <details className="text-xs text-muted-foreground">
-                                    <summary className="cursor-pointer transition-colors hover:text-foreground">
-                                        Figures used
-                                    </summary>
-                                    <pre className="mt-2 max-h-72 overflow-auto rounded-md bg-muted p-3">
-                                        {JSON.stringify(m.answer.evidence, null, 2)}
-                                    </pre>
-                                </details>
+                                <p className="text-xs text-muted-foreground">
+                                    {m.answer.grounded
+                                        ? "Based on your latest reconciliation and customer records."
+                                        : "FinSight didn't find enough data to be sure."}
+                                </p>
                             </div>
                         </div>
                     </section>

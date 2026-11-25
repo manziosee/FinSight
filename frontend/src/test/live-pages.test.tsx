@@ -24,6 +24,9 @@ import { LiveReports } from "@/components/finsight/live/reports";
 import { LiveAudit } from "@/components/finsight/live/audit";
 import { LiveDevelopers } from "@/components/finsight/live/developers";
 import { LiveSettings } from "@/components/finsight/live/settings";
+import { Route as TeamRoute } from "@/routes/app.team";
+
+const TeamPage = TeamRoute.options.component as ComponentType;
 
 const match = {
     id: "m1",
@@ -73,12 +76,33 @@ const routes: [RegExp, unknown][] = [
             authenticated: true,
             clientId: "demo-client",
             tenantId: "tenant_demo",
-            scopes: ["audit:read", "data:write"],
+            scopes: ["audit:read", "data:write", "members:manage"],
             expiresAt: "2099-01-01T00:00:00Z",
             apiUrl: "https://api.example",
         },
     ],
     [/reconciliation\/summary/, summary],
+    [
+        /\/members$/,
+        [
+            {
+                client_id: "demo-client",
+                role: "admin",
+                scopes: [],
+                is_active: true,
+                created_at: "2026-11-01T00:00:00Z",
+                is_you: true,
+            },
+            {
+                client_id: "alice.k",
+                role: "viewer",
+                scopes: [],
+                is_active: false,
+                created_at: "2026-11-02T00:00:00Z",
+                is_you: false,
+            },
+        ],
+    ],
     [/reconciliation\/run-1\/matches/, [match]],
     [/reconciliation\/run-1$/, run],
     [
@@ -165,6 +189,7 @@ describe("live pages render API data", () => {
         ["audit", LiveAudit, /POST \/v1\/reconciliation\/run/],
         ["developers", LiveDevelopers, /Create an API key/],
         ["settings", LiveSettings, /Demo workspace/],
+        ["team", TeamPage, /Alice\.k|Suspended/],
     ])("%s", async (_name, Component, text) => {
         renderLive(Component);
         await waitFor(() => expect(screen.getAllByText(text).length).toBeGreaterThan(0));

@@ -60,7 +60,7 @@ describe("groupEndpoints", () => {
 
     it("every mapped scope is a known platform scope", () => {
         const known = new Set(
-            "data:write transactions:read transactions:write payments:match reconciliation:run reconciliation:read graph:read anomalies:read financial:ask forecast:run actions:execute api-keys:write audit:read".split(
+            "data:write transactions:read transactions:write payments:match reconciliation:run reconciliation:read graph:read anomalies:read financial:ask forecast:run actions:execute api-keys:write audit:read members:manage".split(
                 " ",
             ),
         );

@@ -24,6 +24,7 @@ import {
     PanelLeftClose,
     PanelLeftOpen,
     Building2,
+    UsersRound,
 } from "lucide-react";
 import { Logo } from "@/components/finsight/status";
 import {
@@ -101,6 +102,7 @@ const nav = [
     { to: "/app/approvals", label: "Approvals", Icon: CheckSquare },
     { to: "/app/reports", label: "Reports", Icon: FileText },
     { to: "/app/audit", label: "Audit log", Icon: ScrollText },
+    { to: "/app/team", label: "Team", Icon: UsersRound },
     { to: "/app/developers", label: "Developers", Icon: Code2 },
     { to: "/app/settings", label: "Settings", Icon: Settings },
 ] as const;

@@ -166,6 +166,197 @@
         }
       }
     },
+    "/v1/members": {
+      "get": {
+        "tags": [
+          "members"
+        ],
+        "summary": "List Members",
+        "operationId": "list_members_v1_members_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/identity_Member"
+                  },
+                  "type": "array",
+                  "title": "Response List Members V1 Members Get"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "members"
+        ],
+        "summary": "Add Member",
+        "operationId": "add_member_v1_members_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/identity_MemberCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/identity_MemberCredentials"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/identity_HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/members/{client_id}": {
+      "patch": {
+        "tags": [
+          "members"
+        ],
+        "summary": "Update Member",
+        "operationId": "update_member_v1_members__client_id__patch",
+        "parameters": [
+          {
+            "name": "client_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Client Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/identity_MemberUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/identity_Member"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/identity_HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "members"
+        ],
+        "summary": "Remove Member",
+        "operationId": "remove_member_v1_members__client_id__delete",
+        "parameters": [
+          {
+            "name": "client_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Client Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/identity_HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/members/{client_id}/reset-secret": {
+      "post": {
+        "tags": [
+          "members"
+        ],
+        "summary": "Reset Member Secret",
+        "operationId": "reset_member_secret_v1_members__client_id__reset_secret_post",
+        "parameters": [
+          {
+            "name": "client_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Client Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/identity_MemberCredentials"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/identity_HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/data/ingest": {
       "post": {
         "tags": [
@@ -1201,6 +1392,128 @@
         },
         "type": "object",
         "title": "HTTPValidationError"
+      },
+      "identity_Member": {
+        "properties": {
+          "client_id": {
+            "type": "string",
+            "title": "Client Id"
+          },
+          "role": {
+            "type": "string",
+            "title": "Role",
+            "description": "admin | analyst | viewer | custom"
+          },
+          "scopes": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Scopes"
+          },
+          "is_active": {
+            "type": "boolean",
+            "title": "Is Active"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "is_you": {
+            "type": "boolean",
+            "title": "Is You"
+          }
+        },
+        "type": "object",
+        "required": [
+          "client_id",
+          "role",
+          "scopes",
+          "is_active",
+          "created_at",
+          "is_you"
+        ],
+        "title": "Member"
+      },
+      "identity_MemberCreate": {
+        "properties": {
+          "client_id": {
+            "type": "string",
+            "pattern": "^[a-z0-9][a-z0-9._-]{2,63}$",
+            "title": "Client Id",
+            "description": "Their sign-in name: 3-64 lowercase letters, digits, '.', '_' or '-'.",
+            "examples": [
+              "alice"
+            ]
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "admin",
+              "analyst",
+              "viewer"
+            ],
+            "title": "Role",
+            "default": "analyst"
+          }
+        },
+        "type": "object",
+        "required": [
+          "client_id"
+        ],
+        "title": "MemberCreate"
+      },
+      "identity_MemberCredentials": {
+        "properties": {
+          "member": {
+            "$ref": "#/components/schemas/identity_Member"
+          },
+          "client_secret": {
+            "type": "string",
+            "title": "Client Secret",
+            "description": "Shown once. Share it with the person securely."
+          }
+        },
+        "type": "object",
+        "required": [
+          "member",
+          "client_secret"
+        ],
+        "title": "MemberCredentials"
+      },
+      "identity_MemberUpdate": {
+        "properties": {
+          "role": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "admin",
+                  "analyst",
+                  "viewer"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Role"
+          },
+          "is_active": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Is Active"
+          }
+        },
+        "type": "object",
+        "title": "MemberUpdate"
       },
       "identity_TokenResponse": {
         "properties": {
@@ -2745,6 +3058,9 @@
     },
     {
       "name": "audit"
+    },
+    {
+      "name": "members"
     },
     {
       "name": "ingestion"

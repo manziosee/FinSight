@@ -1,3 +1,10 @@
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogHeader,
+    DialogTitle,
+} from "@/components/ui/dialog";
 import { LiveCounterparties } from "@/components/finsight/live/counterparties";
 import { useSession } from "@/components/finsight/session";
 import { createFileRoute } from "@tanstack/react-router";
@@ -5,13 +12,6 @@ import { useMemo, useState } from "react";
 import { Users, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import {
-    Sheet,
-    SheetContent,
-    SheetHeader,
-    SheetTitle,
-    SheetDescription,
-} from "@/components/ui/sheet";
 import { useWorkspace } from "@/components/finsight/workspace-context";
 import {
     Page,
@@ -148,13 +148,13 @@ function SampleCounterparties({ embedded = false }: { embedded?: boolean }) {
                 ))}
             </DataTable>
             {!parties.length && <Empty>No counterparties match this search.</Empty>}
-            <Sheet open={!!selected} onOpenChange={(o) => !o && setSelected(null)}>
-                <SheetContent className="overflow-y-auto sm:max-w-xl">
-                    <SheetHeader>
-                        <SheetTitle>{selected}</SheetTitle>
-                        <SheetDescription>Linked transaction records</SheetDescription>
-                    </SheetHeader>
-                    <div className="space-y-3 px-4 pb-6">
+            <Dialog open={!!selected} onOpenChange={(o) => !o && setSelected(null)}>
+                <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
+                    <DialogHeader>
+                        <DialogTitle>{selected}</DialogTitle>
+                        <DialogDescription>Linked transaction records</DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-3">
                         {records
                             .filter((r) => r.counterparty === selected)
                             .map((r) => (
@@ -174,8 +174,8 @@ function SampleCounterparties({ embedded = false }: { embedded?: boolean }) {
                                 </div>
                             ))}
                     </div>
-                </SheetContent>
-            </Sheet>
+                </DialogContent>
+            </Dialog>
         </Page>
     );
 }

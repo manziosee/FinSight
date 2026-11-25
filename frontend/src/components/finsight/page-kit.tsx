@@ -167,7 +167,9 @@ function Inline({ text }: { text: string }) {
 /** An AI answer rendered as paragraphs, headings and bullets (no raw HTML). */
 export function RichAnswer({ text, className }: { text: string; className?: string }) {
     return (
-        <div className={cn("space-y-2 text-sm leading-relaxed", className)}>
+        <div
+            className={cn("space-y-2 text-sm leading-relaxed [overflow-wrap:anywhere]", className)}
+        >
             {answerBlocks(text).map((b, i) =>
                 b.kind === "ul" ? (
                     <ul key={i} className="list-disc space-y-1 pl-5 marker:text-primary">
